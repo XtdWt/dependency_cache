@@ -12,6 +12,14 @@ pub struct DependencyCacheBase {
     pub method_dependency_graph: MethodDependencyGraph,
 }
 
+
+impl DependencyCacheBase {
+    pub fn set_cached_value(&mut self, name: &str, value: Py<PyAny>) {
+        self.cache.insert(name.to_string(), value);
+        self.method_dependency_graph.validate(name.to_string());
+    }
+}
+
 #[pymethods]
 impl DependencyCacheBase {
     #[new]
@@ -28,11 +36,6 @@ impl DependencyCacheBase {
             return self.cache.get(name).map(|obj| obj.clone_ref(py));
         }
         None
-    }
-
-    pub fn set_cached_value(&mut self, name: &str, value: Py<PyAny>) {
-        self.cache.insert(name.to_string(), value);
-        self.method_dependency_graph.validate(name.to_string());
     }
 
     pub fn update_cached_value(&mut self, name: &str, value: Py<PyAny>) {
