@@ -1,22 +1,7 @@
 from dependency_cache import DependencyCacheBase, automagic_dependency_cache, dependency_cache
 
 
-class ExampleClass(DependencyCacheBase):
-    def __init__(self, name):
-        self.name = name
-
-    @dependency_cache(use_cache=True)
-    def expensive(self, x, y=0):
-        print(f"computing expensive({x}, y={y}) for {self.name}...")
-        return f"{self.name}:{x}:{y}"
-
-    @dependency_cache(use_cache=False)
-    def uncached(self, x):
-        print(f"computing uncached({x}) for {self.name}...")
-        return f"{self.name}:{x}"
-
-
-class ExampleCalculation1(DependencyCacheBase):
+class ExampleCalculationMagic(DependencyCacheBase):
     """  E
        //  \\
        D    \\
@@ -55,7 +40,7 @@ class ExampleCalculation1(DependencyCacheBase):
         return self.D() + self.C()
 
 
-class ExampleCalculation2(DependencyCacheBase):
+class ExampleCalculationManual(DependencyCacheBase):
     """D     E
         \\  //
           C
@@ -94,44 +79,19 @@ class ExampleCalculation2(DependencyCacheBase):
 
 
 if __name__ == "__main__":
-    # a = ExampleClass("a")
-    # b = ExampleClass("b")
-    # print("First call (miss):", a.expensive(1, y=2))
-    # print("Second call, same args (hit):", a.expensive(1, y=2))
-    # print("Third call, DIFFERENT args -- still returns the first result:")
-    # print(" ", a.expensive(999, y=999))
-    # print("Different instance -- its own cache:", b.expensive(7, y=8))
-
-    # print("\nuse_cache=False recomputes every time:")
-    # a.uncached(5)
-    # a.uncached(5)
-
-    # print("\na.clear_cache() only clears a's cache, not b's:")
-    # a.clear_cache()
-    # print(" ", a.expensive(42, y=42))
-    # print(" ", b.expensive(1, y=1), "(unchanged)")
     print("testing calculation 1")
-    c1 = ExampleCalculation1(1, 2, 3)
-    # print(c.current_cache(), c.current_graph(), c.current_cache_validation())
-    # print(c.D())
+    c1 = ExampleCalculationMagic(1, 2, 3)
+    print(f"Result of E = {c1.E()}")  # calculates all notes, prints 6
     print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
-    print(c1.E())
-    print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
-    print(c1.E())
-
-    c1.update_cached_value("A", 2)
-    print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
-    print(c1.E())
-
+    print(f"Result of E = {c1.E()}")  # no calculation, returns cached 6
+    c1.update_cached_value("A", 2)  # invalidates D, E
+    print(f"Result of E = {c1.E()}")  # recalculates D, E returns 7
     print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
 
     print("testing calculation 2")
-    c2 = ExampleCalculation2(6, 7)
-    print(c2.E())
-    print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())
-    c2.update_cached_value("A", 0)
-    print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())
-    print(c2.E())
-    print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())
-    print(c2.D())
+    c2 = ExampleCalculationManual(6, 7)
+    print(f"Result of E = {c2.E()}")  # calculates all notes, prints 26
+    c2.update_cached_value("A", 0)  # invalidates C, E
+    print(f"Result of E = {c2.E()}")  # recalculates C, E, returns 14
+    print(f"Result of D = {c2.D()}")  # recalculates D, returns 3.5
     print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())
