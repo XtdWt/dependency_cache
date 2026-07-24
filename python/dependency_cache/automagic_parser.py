@@ -3,7 +3,7 @@ import functools
 import inspect
 import textwrap
 
-from .dependency_cache import dependency_cache
+from .dependency_cache import dependency_cached
 
 
 class SelfCallVisitor(ast.NodeVisitor):
@@ -38,12 +38,12 @@ def calculate_dependency_list(code: str) -> list[str]:
     return visitor.dependencies
 
 
-def automagic_dependency_cache(**kwargs):
+def automagically_dependency_cached(**kwargs):
     def decorator(func):
         func_as_string = inspect.getsource(func)
         function_dependencies = kwargs.pop("dependencies", []) or calculate_dependency_list(func_as_string)
 
-        @dependency_cache(dependencies=function_dependencies, **kwargs)
+        @dependency_cached(dependencies=function_dependencies, **kwargs)
         @functools.wraps(func)
         def wrapper(*call_args, **call_kwargs):
             return func(*call_args, **call_kwargs)

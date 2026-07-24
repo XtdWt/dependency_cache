@@ -7,7 +7,7 @@ use pyo3::exceptions::{PyTypeError, PyValueError};
 
 use dependency_cache_base::DependencyCacheBase;
 
-#[pyclass(name = "dependency_cache", frozen)]
+#[pyclass(name = "dependency_cached", frozen)]
 pub struct DependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<String>
@@ -111,9 +111,15 @@ impl DependencyCacheDecorator {
 }
 
 #[pymodule]
-fn dependency_cache(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_class::<DependencyCacheBase>()?;
-    m.add_class::<DependencyCacheDecoratorFactory>()?;
-    m.add_class::<DependencyCacheDecorator>()?;
-    Ok(())
+mod dependency_cache {
+    // use super::*;
+
+    #[pymodule_export]
+    use super::DependencyCacheBase;
+
+    #[pymodule_export]
+    use super::DependencyCacheDecoratorFactory;
+
+    #[pymodule_export]
+    use super::DependencyCacheDecorator;
 }

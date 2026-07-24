@@ -1,4 +1,4 @@
-from dependency_cache import DependencyCacheBase, automagic_dependency_cache, dependency_cache
+from dependency_cache import DependencyCacheBase, automagically_dependency_cached, dependency_cached
 
 
 class ExampleCalculationMagic(DependencyCacheBase):
@@ -14,27 +14,27 @@ class ExampleCalculationMagic(DependencyCacheBase):
         self.y = y
         self.z = z
 
-    @automagic_dependency_cache()
+    @automagically_dependency_cached()
     def A(self):
         print("calculating A")
         return self.x
 
-    @automagic_dependency_cache()
+    @automagically_dependency_cached()
     def B(self):
         print("calculating B")
         return self.y
 
-    @automagic_dependency_cache()
+    @automagically_dependency_cached()
     def C(self):
         print("calculating C")
         return self.z
 
-    @automagic_dependency_cache()
+    @automagically_dependency_cached()
     def D(self):
         print("calculating D")
         return self.A() + self.B()
 
-    @automagic_dependency_cache(dependencies=["C", "D"])
+    @automagically_dependency_cached()
     def E(self):
         print("calculating E")
         return self.D() + self.C()
@@ -52,27 +52,27 @@ class ExampleCalculationManual(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cache()
+    @dependency_cached()
     def A(self):
         print("calculating A")
         return self.x
 
-    @dependency_cache()
+    @dependency_cached()
     def B(self):
         print("calculating B")
         return self.y
 
-    @dependency_cache(dependencies=["A", "B"])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         print("calculating C")
         return self.A() + self.B()
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def D(self):
         print("calculating D")
         return self.C() / 2
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def E(self):
         print("calculating E")
         return self.C() * 2
@@ -80,18 +80,28 @@ class ExampleCalculationManual(DependencyCacheBase):
 
 if __name__ == "__main__":
     print("testing calculation 1")
+    print("""       E
+     /  \\
+    D    \\
+  /   \\   \\
+ A     B   C""")
     c1 = ExampleCalculationMagic(1, 2, 3)
-    print(f"Result of E = {c1.E()}")  # calculates all notes, prints 6
+    print(f"Result of E = {c1.E()}")  # calculates all, prints 6
     print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
     print(f"Result of E = {c1.E()}")  # no calculation, returns cached 6
     c1.update_cached_value("A", 2)  # invalidates D, E
-    print(f"Result of E = {c1.E()}")  # recalculates D, E returns 7
     print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
+    print(f"Result of E = {c1.E()}")  # recalculates D, E returns 7
 
     print("testing calculation 2")
+    print("""D     E
+ \\   /
+   C
+ /   \\
+A     B""")
     c2 = ExampleCalculationManual(6, 7)
-    print(f"Result of E = {c2.E()}")  # calculates all notes, prints 26
+    print(f"Result of E = {c2.E()}")  # calculates all, prints 26
     c2.update_cached_value("A", 0)  # invalidates C, E
+    print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())
     print(f"Result of E = {c2.E()}")  # recalculates C, E, returns 14
     print(f"Result of D = {c2.D()}")  # recalculates D, returns 3.5
-    print(c2.current_cache(), c2.current_graph(), c2.current_cache_validation())

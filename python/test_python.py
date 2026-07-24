@@ -1,5 +1,5 @@
 import pytest
-from dependency_cache import DependencyCacheBase, dependency_cache
+from dependency_cache import DependencyCacheBase, dependency_cached
 
 
 class SimpleTestObj(DependencyCacheBase):
@@ -7,15 +7,15 @@ class SimpleTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cache()
+    @dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cache()
+    @dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cache(dependencies=["A", "B"])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
@@ -25,23 +25,23 @@ class HardTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cache()
+    @dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cache()
+    @dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cache(dependencies=["A", "B"])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def D(self):
         return self.C() * 2
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def E(self):
         return self.C() * 3
 
@@ -51,27 +51,27 @@ class HarderTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cache()
+    @dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cache()
+    @dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cache(dependencies=["A", "B"])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def D(self):
         return self.C() * 2
 
-    @dependency_cache(dependencies=["C"])
+    @dependency_cached(dependencies=["C"])
     def E(self):
         return self.C() * 3
 
-    @dependency_cache(dependencies=["D", "E"])
+    @dependency_cached(dependencies=["D", "E"])
     def F(self):
         return self.E() + self.D()
 

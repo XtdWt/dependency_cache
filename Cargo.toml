@@ -10,7 +10,11 @@ crate-type = ["cdylib"]
 
 [dependencies.pyo3]
 version = "0.28.3"
-features = ["abi3-py38"]
+features = [
+    "abi3-py38",
+    "extension-module",
+    "experimental-inspect",
+]
 
 [profile.release]
 lto = "fat"
