@@ -1,0 +1,34 @@
+name: Test
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Testing Rust
+      run: cargo test --verbose
+
+    - name: Build and Testing Python
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip maturin
+        pip install --upgrade pip pytest
+        maturin develop --release
+        pytest -v

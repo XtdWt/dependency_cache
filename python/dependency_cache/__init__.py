@@ -1,11 +1,11 @@
-from .automagic_parser import automagic_dependency_cache
+from .automagic_parser import automagically_dependency_cached
 from .dependency_cache import (
     DependencyCacheBase,
-    dependency_cache,
+    dependency_cached,
 )
 
 __all__ = [
-    "dependency_cache",
+    "dependency_cached",
     "DependencyCacheBase",
-    "automagic_dependency_cache",
+    "automagically_dependency_cached",
 ]
