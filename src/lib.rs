@@ -1,6 +1,6 @@
 mod decorator;
-mod dependency_cache_base;
 mod dependency_graph;
+mod dependency_cache_base;
 
 use pyo3::prelude::*;
 
@@ -28,10 +28,11 @@ impl DependencyCacheDecoratorFactory {
         let method_name: String = func.getattr(py, "__name__")?.extract(py)?;
         return Ok(
             DependencyCacheDecorator {
-            func,
-            use_cache: self.use_cache,
-            dependencies: self.dependencies.clone(),
-            method_name,}
+                func,
+                use_cache: self.use_cache,
+                dependencies: self.dependencies.clone(),
+                method_name,
+            }
         );
     }
 }

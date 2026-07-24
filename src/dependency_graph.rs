@@ -20,7 +20,7 @@ impl MethodDependencyGraph {
                 .get(x)
                 .is_some_and(|deps| deps.contains(&current))
         });
-        if current_in_cache & dependencies_added {
+        if current_in_cache && dependencies_added {
             return None;
         }
         self.cache_validation.insert(current.clone(), false);
@@ -136,5 +136,44 @@ mod tests {
         graph_state.insert("F".to_string(), vec!["C".to_string()]);
         graph_state.insert("G".to_string(), vec!["C".to_string()]);
         assert_eq!(dg.cache_dependency_graph, graph_state);
+    }
+
+    #[test]
+    fn test_name_validation() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        assert!(!dg.is_valid("A".to_string()));
+        assert!(!dg.is_valid("B".to_string()));
+        assert!(!dg.is_valid("C".to_string()));
+
+        dg.validate("A".to_string());
+
+        assert!(dg.is_valid("A".to_string()));
+        assert!(!dg.is_valid("B".to_string()));
+        assert!(!dg.is_valid("C".to_string()));
+
+        dg.validate("C".to_string());
+
+        assert!(dg.is_valid("A".to_string()));
+        assert!(!dg.is_valid("B".to_string()));
+        assert!(dg.is_valid("C".to_string()));
+    }
+
+    #[test]
+    fn test_name_invalidation() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.validate("A".to_string());
+        dg.validate("B".to_string());
+        dg.validate("C".to_string());
+
+        dg.invalidate("A".to_string());
+        assert!(!dg.is_valid("A".to_string()));
+        dg.validate("A".to_string());
+
+        dg.invalidate("B".to_string());
+        assert!(!dg.is_valid("A".to_string()));
+        assert!(!dg.is_valid("B".to_string()));
     }
 }
