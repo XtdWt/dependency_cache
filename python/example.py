@@ -80,11 +80,11 @@ class ExampleCalculationManual(DependencyCacheBase):
 
 if __name__ == "__main__":
     print("testing calculation 1")
-    print("""       E
-     /  \\
-    D    \\
-  /   \\   \\
- A     B   C""")
+    print("       E")
+    print("     /  \\")
+    print("    D    \\")
+    print("  /   \\   \\")
+    print(" A     B   C")
     c1 = ExampleCalculationMagic(1, 2, 3)
     print(f"Result of E = {c1.E()}")  # calculates all, prints 6
     print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
@@ -94,11 +94,11 @@ if __name__ == "__main__":
     print(f"Result of E = {c1.E()}")  # recalculates D, E returns 7
 
     print("testing calculation 2")
-    print("""D     E
- \\   /
-   C
- /   \\
-A     B""")
+    print("D     E")
+    print(" \\   /")
+    print("   C")
+    print(" /   \\")
+    print("A     B")
     c2 = ExampleCalculationManual(6, 7)
     print(f"Result of E = {c2.E()}")  # calculates all, prints 26
     c2.update_cached_value("A", 0)  # invalidates C, E

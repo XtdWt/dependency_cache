@@ -76,7 +76,5 @@ mod tests {
     fn test_is_valid() {
         let mut dg = MethodDependencyGraph::new();
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-
-
     }
 }

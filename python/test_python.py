@@ -2,6 +2,24 @@ import pytest
 from dependency_cache import DependencyCacheBase, dependency_cached
 
 
+class IncorrectInheritance:
+    def __init__(self):
+        pass
+
+    @dependency_cached()
+    def A(self):
+        return 1
+
+
+class IncorrectMethod(DependencyCacheBase):
+    def __init__(self):
+        pass
+
+    @dependency_cached()
+    def A():
+        return 1
+
+
 class SimpleTestObj(DependencyCacheBase):
     def __init__(self, x, y):
         self.x = x
@@ -74,6 +92,18 @@ class HarderTestObj(DependencyCacheBase):
     @dependency_cached(dependencies=["D", "E"])
     def F(self):
         return self.E() + self.D()
+
+
+def test_raises_typeerror():
+    with pytest.raises(TypeError):
+        c = IncorrectInheritance()
+        c.A()
+
+
+def test_incorrect_method_raises_valueerror():
+    with pytest.raises(TypeError):
+        c = IncorrectMethod()
+        c.A()
 
 
 @pytest.mark.parametrize(
