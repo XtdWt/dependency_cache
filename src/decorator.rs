@@ -1,9 +1,8 @@
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
-use pyo3::exceptions::{PyTypeError, PyValueError};
 
 use crate::dependency_cache_base::DependencyCacheBase;
-
 
 #[pyclass(frozen)]
 pub struct DependencyCacheDecorator {
@@ -15,12 +14,7 @@ pub struct DependencyCacheDecorator {
 
 #[pymethods]
 impl DependencyCacheDecorator {
-
-    fn __set__(
-        &self,
-        _obj: Py<PyAny>,
-        _value: Py<PyAny>
-    ) -> PyResult<()> {
+    fn __set__(&self, _obj: Py<PyAny>, _value: Py<PyAny>) -> PyResult<()> {
         Err(PyTypeError::new_err("cannot assign to decorated method"))
     }
 

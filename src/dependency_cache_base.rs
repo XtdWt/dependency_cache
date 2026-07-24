@@ -5,13 +5,11 @@ use std::collections::HashMap;
 
 use crate::dependency_graph::MethodDependencyGraph;
 
-
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
     pub cache: HashMap<String, Py<PyAny>>,
     pub method_dependency_graph: MethodDependencyGraph,
 }
-
 
 impl DependencyCacheBase {
     pub fn set_cached_value(&mut self, name: &str, value: Py<PyAny>) {
@@ -25,17 +23,17 @@ impl DependencyCacheBase {
     #[new]
     #[pyo3(signature = (*_args, **_kwargs))]
     fn new(_args: &Bound<'_, PyTuple>, _kwargs: Option<&Bound<'_, PyDict>>) -> Self {
-        Self {
+        return Self {
             cache: HashMap::new(),
             method_dependency_graph: MethodDependencyGraph::new(),
-        }
+        };
     }
 
     pub fn get_cached_value(&self, py: Python<'_>, name: &str) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(name.to_string()) {
             return self.cache.get(name).map(|obj| obj.clone_ref(py));
         }
-        None
+        return None;
     }
 
     pub fn update_cached_value(&mut self, name: &str, value: Py<PyAny>) {
@@ -53,7 +51,7 @@ impl DependencyCacheBase {
         for (name, value) in &self.cache {
             dict.set_item(name, value.clone_ref(py))?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     pub fn current_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
@@ -61,7 +59,7 @@ impl DependencyCacheBase {
         for (name, value) in &self.method_dependency_graph.cache_dependency_graph {
             dict.set_item(name, value)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     pub fn current_cache_validation<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
@@ -69,6 +67,6 @@ impl DependencyCacheBase {
         for (name, value) in &self.method_dependency_graph.cache_validation {
             dict.set_item(name, value)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 }
