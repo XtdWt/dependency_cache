@@ -144,11 +144,11 @@ def test_calculation_simple(x_value, y_value, result):
 
     assert a.C() == result
 
-    assert a.current_graph() == {"A": ["C"], "B": ["C"]}
+    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
     assert a.current_cache_validation() == {"A": True, "B": True, "C": True}
 
     a.update_cached_value("B", None)
-    assert a.current_graph() == {"A": ["C"], "B": ["C"]}
+    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
     assert a.current_cache_validation() == {"A": True, "B": True, "C": False}
 
 
@@ -169,11 +169,11 @@ def test_calculation_hard(x_value, y_value, result1, result2):
     assert a.D() == result1
     assert a.E() == result2
 
-    assert {k: sorted(v) for k, v in a.current_graph().items()} == {"A": ["C"], "B": ["C"], "C": ["D", "E"]}
+    assert a.current_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}}
     assert a.current_cache_validation() == {"A": True, "B": True, "C": True, "D": True, "E": True}
 
     a.update_cached_value("B", None)
-    assert {k: sorted(v) for k, v in a.current_graph().items()} == {"A": ["C"], "B": ["C"], "C": ["D", "E"]}
+    assert a.current_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}}
     assert a.current_cache_validation() == {"A": True, "B": True, "C": False, "D": False, "E": False}
 
 
@@ -193,21 +193,21 @@ def test_calculation_harder(x_value, y_value, result):
 
     assert a.F() == result
 
-    assert {k: sorted(v) for k, v in a.current_graph().items()} == {
-        "A": ["C"],
-        "B": ["C"],
-        "C": ["D", "E"],
-        "D": ["F"],
-        "E": ["F"],
+    assert a.current_graph() == {
+        "A": {"C"},
+        "B": {"C"},
+        "C": {"D", "E"},
+        "D": {"F"},
+        "E": {"F"},
     }
     assert a.current_cache_validation() == {"A": True, "B": True, "C": True, "D": True, "E": True, "F": True}
 
     a.update_cached_value("B", None)
-    assert {k: sorted(v) for k, v in a.current_graph().items()} == {
-        "A": ["C"],
-        "B": ["C"],
-        "C": ["D", "E"],
-        "D": ["F"],
-        "E": ["F"],
+    assert a.current_graph() == {
+        "A": {"C"},
+        "B": {"C"},
+        "C": {"D", "E"},
+        "D": {"F"},
+        "E": {"F"},
     }
     assert a.current_cache_validation() == {"A": True, "B": True, "C": False, "D": False, "E": False, "F": False}

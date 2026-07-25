@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 pub struct MethodDependencyGraph {
     pub cache_validation: HashMap<String, bool>,
-    pub cache_dependency_graph: HashMap<String, Vec<String>>, // maps child_name to Vec<parents_name>
+    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>
 }
 
 impl MethodDependencyGraph {
@@ -28,7 +28,7 @@ impl MethodDependencyGraph {
             self.cache_dependency_graph
                 .entry(dependent_method.clone())
                 .or_default()
-                .push(current.clone());
+                .insert(current.clone());
             self.cache_validation
                 .entry(dependent_method)
                 .or_insert(false);
@@ -116,8 +116,8 @@ mod tests {
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
 
         let mut graph_state = HashMap::new();
-        graph_state.insert("B".to_string(), vec!["A".to_string()]);
-        graph_state.insert("C".to_string(), vec!["A".to_string()]);
+        graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
         assert_eq!(dg.cache_dependency_graph, graph_state);
     }
 
@@ -129,12 +129,12 @@ mod tests {
         dg.add_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()]);
 
         let mut graph_state = HashMap::new();
-        graph_state.insert("B".to_string(), vec!["A".to_string()]);
-        graph_state.insert("C".to_string(), vec!["A".to_string()]);
-        graph_state.insert("D".to_string(), vec!["B".to_string()]);
-        graph_state.insert("E".to_string(), vec!["B".to_string()]);
-        graph_state.insert("F".to_string(), vec!["C".to_string()]);
-        graph_state.insert("G".to_string(), vec!["C".to_string()]);
+        graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("D".to_string(), HashSet::from(["B".to_string()]));
+        graph_state.insert("E".to_string(), HashSet::from(["B".to_string()]));
+        graph_state.insert("F".to_string(), HashSet::from(["C".to_string()]));
+        graph_state.insert("G".to_string(), HashSet::from(["C".to_string()]));
         assert_eq!(dg.cache_dependency_graph, graph_state);
     }
 
@@ -175,5 +175,19 @@ mod tests {
         dg.invalidate("B".to_string());
         assert!(!dg.is_valid("A".to_string()));
         assert!(!dg.is_valid("B".to_string()));
+    }
+
+    #[test]
+    fn test_add_dependency_idempotency(){
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        let mut graph_state = HashMap::new();
+        graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
+        assert_eq!(dg.cache_dependency_graph, graph_state);
     }
 }
