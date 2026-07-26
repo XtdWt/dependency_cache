@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 pub struct MethodDependencyGraph {
-    pub cache_validation: HashMap<String, bool>,
-    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>
+    pub cache_validation: HashMap<String, bool>,  // if not in cache_validation -> ALWAYS invalid
+    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
 }
 
 impl MethodDependencyGraph {

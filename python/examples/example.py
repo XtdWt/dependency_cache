@@ -1,4 +1,4 @@
-from dependency_cache import DependencyCacheBase, dependency_cached
+from dependency_cache import DependencyCacheBase, dependency_cached, plot_dependency_graph
 
 
 class ExampleCalculationManual(DependencyCacheBase):
@@ -52,3 +52,5 @@ if __name__ == "__main__":
     print(c.current_cache(), c.current_graph(), c.current_cache_validation())
     print(f"Result of E = {c.E()}")  # recalculates C, E, returns 14
     print(f"Result of D = {c.D()}")  # recalculates D, returns 3.5
+
+    # plot_dependency_graph(c, with_labels=True)
