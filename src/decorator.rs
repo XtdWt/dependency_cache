@@ -15,7 +15,7 @@ pub struct DependencyCacheDecorator {
 #[pymethods]
 impl DependencyCacheDecorator {
     fn __set__(&self, _obj: Py<PyAny>, _value: Py<PyAny>) -> PyResult<()> {
-        Err(PyTypeError::new_err("cannot assign to decorated method"))
+        return Err(PyTypeError::new_err("cannot assign to decorated method"));
     }
 
     fn __get__(
@@ -33,7 +33,7 @@ impl DependencyCacheDecorator {
             .import("types")?
             .getattr("MethodType")?
             .call1((slf.clone(), obj))?;
-        Ok(bound_method.unbind())
+        return Ok(bound_method.unbind());
     }
 
     #[pyo3(signature = (*args, **kwargs))]
@@ -68,13 +68,10 @@ impl DependencyCacheDecorator {
         let result = func
             .call(args, kwargs)?
             .unbind();
-        // base.borrow_mut()
-        //     .method_dependency_graph
-        //     .add_dependency(self.method_name.clone(), self.dependencies.clone());
 
         base.borrow_mut()
             .set_cached_value(&self.method_name, result.clone_ref(py));
 
-        Ok(result)
+        return Ok(result);
     }
 }

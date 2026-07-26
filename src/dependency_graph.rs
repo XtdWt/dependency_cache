@@ -14,15 +14,6 @@ impl MethodDependencyGraph {
     }
 
     pub fn add_dependency(&mut self, current: String, dependencies: Vec<String>) -> Option<()> {
-        let current_in_cache = self.cache_validation.contains_key(&current);
-        let dependencies_added = dependencies.iter().all(|x| {
-            self.cache_dependency_graph
-                .get(x)
-                .is_some_and(|deps| deps.contains(&current))
-        });
-        if current_in_cache && dependencies_added {
-            return None;
-        }
         self.cache_validation.insert(current.clone(), false);
         for dependent_method in dependencies {
             self.cache_dependency_graph
@@ -178,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_dependency_idempotency(){
+    fn test_add_dependency_idempotency() {
         let mut dg = MethodDependencyGraph::new();
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);

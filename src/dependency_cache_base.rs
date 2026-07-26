@@ -19,34 +19,31 @@ impl DependencyCacheBase {
     }
 
     fn build_dependency_graph(cls: &Bound<'_, PyType>) -> PyResult<MethodDependencyGraph> {
-            let mut graph = MethodDependencyGraph::new();
-            let mut seen = std::collections::HashSet::new();
+        let mut graph = MethodDependencyGraph::new();
+        let mut visited = std::collections::HashSet::new();
 
-            for klass in cls.mro().iter() {
-                let klass: Bound<'_, PyType> = klass.extract()?;
-                let namespace = klass.getattr("__dict__")?;
+        for klass in cls.mro().iter() {
+            let klass: Bound<'_, PyType> = klass.extract()?;
+            let namespace = klass.getattr("__dict__")?;
 
-                for item in namespace.call_method0("items")?.try_iter()? {
-                    let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
+            for item in namespace.call_method0("items")?.try_iter()? {
+                let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
 
-                    if name.starts_with("__") || !seen.insert(name.clone()) {
-                        continue;
-                    }
-
-                    // Only attributes that are genuinely DependencyCacheDecorator
-                    // instances participate in the graph; plain methods are
-                    // skipped rather than erroring.
-                    let Ok(decorator) = value.cast::<DependencyCacheDecorator>() else {
-                        continue;
-                    };
-                    let decorator = decorator.borrow();
-
-                    graph.add_dependency(name, decorator.dependencies.clone());
+                if name.starts_with("__") || !visited.insert(name.clone()) {
+                    continue;
                 }
-            }
 
-            Ok(graph)
+                let Ok(decorator) = value.cast::<DependencyCacheDecorator>() else {
+                    continue;
+                };
+                let decorator = decorator.borrow();
+
+                graph.add_dependency(name, decorator.dependencies.clone());
+            }
         }
+
+        return Ok(graph);
+    }
 }
 
 #[pymethods]
@@ -54,10 +51,10 @@ impl DependencyCacheBase {
     #[new]
     #[pyo3(signature = (*_args, **_kwargs))]
     fn new(_args: &Bound<'_, PyTuple>, _kwargs: Option<&Bound<'_, PyDict>>) -> Self {
-        Self {
+        return Self {
             cache: HashMap::new(),
             method_dependency_graph: MethodDependencyGraph::new(),
-        }
+        };
     }
 
     #[pyo3(signature = (*_args, **_kwargs))]
@@ -69,7 +66,7 @@ impl DependencyCacheBase {
         let cls = slf.get_type();
         let graph = Self::build_dependency_graph(&cls)?;
         slf.borrow_mut().method_dependency_graph = graph;
-        Ok(())
+        return Ok(());
     }
 
     pub fn get_cached_value(&self, py: Python<'_>, name: &str) -> Option<Py<PyAny>> {
