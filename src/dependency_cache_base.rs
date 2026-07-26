@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyType};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::MethodDependencyGraph;
 use crate::decorator::DependencyCacheDecorator;
@@ -13,14 +13,17 @@ pub struct DependencyCacheBase {
 }
 
 impl DependencyCacheBase {
-    pub fn set_cached_value(&mut self, name: &str, value: Py<PyAny>) {
+    pub fn set_cached_value(&mut self, name: &str, value: Py<PyAny>, validate: bool) {
         self.cache.insert(name.to_string(), value);
-        self.method_dependency_graph.validate(name.to_string());
+        if validate {
+            self.method_dependency_graph.validate(name.to_string());
+        }
     }
 
     fn build_dependency_graph(cls: &Bound<'_, PyType>) -> PyResult<MethodDependencyGraph> {
         let mut graph = MethodDependencyGraph::new();
-        let mut visited = std::collections::HashSet::new();
+        let mut visited = HashSet::new();
+        let mut use_cache_methods = HashSet::new();
 
         for klass in cls.mro().iter() {
             let klass: Bound<'_, PyType> = klass.extract()?;
@@ -37,11 +40,23 @@ impl DependencyCacheBase {
                     continue;
                 };
                 let decorator = decorator.borrow();
-
+                if !decorator.use_cache {
+                    use_cache_methods.insert(name.clone());
+                };
                 graph.add_dependency(name, decorator.dependencies.clone());
             }
         }
-
+        let to_invalidate: Vec<String> = use_cache_methods
+            .iter()
+            .map(|x| graph.methods_to_invalidate(x.to_string()))
+            .into_iter()
+            .flatten()
+            .collect::<HashSet<String>>()
+            .into_iter()
+            .collect();
+        for method_name in to_invalidate {
+            graph.cache_validation.remove(&method_name);
+        };
         return Ok(graph);
     }
 }

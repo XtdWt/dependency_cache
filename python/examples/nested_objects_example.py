@@ -40,8 +40,8 @@ if __name__ == "__main__":
     print("Outer A    InnerObj")
     print("            |")
     print("           Inner A")
-    c3 = OuterNestedObject(1, 1.5)
-    print(f"Result of E = {c3.B()}")  # calculates all, prints 2.5
+    c = OuterNestedObject(1, 1.5)
+    print(f"Result of B = {c.B()}")  # calculates all, prints 2.5
 
-    print(f"Result of E = {c3.B()}")  # prints 2.5
-    print(c3.current_cache(), c3.current_graph(), c3.current_cache_validation())
+    print(f"Result of B = {c.B()}")  # prints 2.5
+    print(c.current_cache(), c.current_graph(), c.current_cache_validation())

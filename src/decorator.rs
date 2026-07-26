@@ -43,8 +43,6 @@ impl DependencyCacheDecorator {
         args: &Bound<'_, PyTuple>,
         kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<Py<PyAny>> {
-        let func = self.func.bind(py);
-
         if args.is_empty() {
             return Err(PyValueError::new_err(
                 "dependency_cached can only be used as an instance method decorator",
@@ -58,6 +56,8 @@ impl DependencyCacheDecorator {
             )
         })?;
 
+        let func = self.func.bind(py);
+
         if !self.use_cache {
             return Ok(func.call(args, kwargs)?.unbind());
         }
@@ -70,8 +70,7 @@ impl DependencyCacheDecorator {
             .unbind();
 
         base.borrow_mut()
-            .set_cached_value(&self.method_name, result.clone_ref(py));
-
+            .set_cached_value(&self.method_name, result.clone_ref(py), self.use_cache);
         return Ok(result);
     }
 }

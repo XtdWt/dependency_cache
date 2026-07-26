@@ -47,10 +47,10 @@ if __name__ == "__main__":
     print("    D    \\")
     print("  /   \\   \\")
     print(" A     B   C")
-    c1 = ExampleCalculationMagic(1, 2, 3)
-    print(f"Result of E = {c1.E()}")  # calculates all, prints 6
-    print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
-    print(f"Result of E = {c1.E()}")  # no calculation, returns cached 6
-    c1.update_cached_value("A", 2)  # invalidates D, E
-    print(c1.current_cache(), c1.current_graph(), c1.current_cache_validation())
-    print(f"Result of E = {c1.E()}")  # recalculates D, E returns 7
+    c = ExampleCalculationMagic(1, 2, 3)
+    print(f"Result of E = {c.E()}")  # calculates all, prints 6
+    print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+    print(f"Result of E = {c.E()}")  # no calculation, returns cached 6
+    c.update_cached_value("A", 2)  # invalidates D, E
+    print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+    print(f"Result of E = {c.E()}")  # recalculates D, E returns 7

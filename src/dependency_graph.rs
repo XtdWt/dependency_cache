@@ -27,7 +27,7 @@ impl MethodDependencyGraph {
         return Some(());
     }
 
-    pub fn invalidate(&mut self, current: String) -> Option<()> {
+    pub fn methods_to_invalidate(&self, current: String) -> Vec<String> {
         let mut queue = Vec::new();
         let mut visited = HashSet::new();
         let mut to_invalidate = Vec::new();
@@ -46,9 +46,14 @@ impl MethodDependencyGraph {
                 }
             }
         }
+        return to_invalidate;
+    }
+
+    pub fn invalidate(&mut self, current: String) -> Option<()> {
+        let to_invalidate = self.methods_to_invalidate(current);
 
         for node in to_invalidate {
-            self.cache_validation.insert(node, false);
+            self.cache_validation.entry(node).and_modify(|state| *state = false);
         }
 
         return Some(());
@@ -62,8 +67,8 @@ impl MethodDependencyGraph {
             .unwrap_or(false);
     }
 
-    pub fn validate(&mut self, current: String) -> Option<bool> {
-        return self.cache_validation.insert(current, true);
+    pub fn validate(&mut self, current: String) {
+        self.cache_validation.entry(current).and_modify(|state| *state = true);
     }
 }
 
