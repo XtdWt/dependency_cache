@@ -94,6 +94,19 @@ class HarderTestObj(DependencyCacheBase):
         return self.E() + self.D()
 
 
+class CycleTestObj(DependencyCacheBase):
+    def __init__(self, x):
+        self.x = x
+
+    @dependency_cached(dependencies=["B"])
+    def A(self):
+        return self.B() + self.x
+
+    @dependency_cached(dependencies=["A"])
+    def B(self):
+        return self.A() + self.x
+
+
 def test_raises_typeerror():
     with pytest.raises(TypeError):
         c = IncorrectInheritance()
@@ -211,3 +224,13 @@ def test_calculation_harder(x_value, y_value, result):
         "E": {"F"},
     }
     assert a.current_cache_validation() == {"A": True, "B": True, "C": False, "D": False, "E": False, "F": False}
+
+
+def test_cycles():
+    c = CycleTestObj(0)
+    with pytest.raises(RecursionError):
+        c.A()
+
+    c = CycleTestObj(1)
+    with pytest.raises(RecursionError):
+        c.A()

@@ -45,10 +45,6 @@ impl DependencyCacheDecorator {
     ) -> PyResult<Py<PyAny>> {
         let func = self.func.bind(py);
 
-        if !self.use_cache {
-            return Ok(func.call(args, kwargs)?.unbind());
-        }
-
         if args.is_empty() {
             return Err(PyValueError::new_err(
                 "dependency_cached can only be used as an instance method decorator",
@@ -61,6 +57,10 @@ impl DependencyCacheDecorator {
                 "the decorated method's class must inherit from DependencyCacheBase",
             )
         })?;
+
+        if !self.use_cache {
+            return Ok(func.call(args, kwargs)?.unbind());
+        }
 
         if let Some(cached) = base.borrow().get_cached_value(py, &self.method_name) {
             return Ok(cached);
