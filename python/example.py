@@ -10,6 +10,7 @@ class ExampleCalculationMagic(DependencyCacheBase):
     """
 
     def __init__(self, x, y, z):
+        super().__init__()
         self.x = x
         self.y = y
         self.z = z
@@ -49,6 +50,7 @@ class ExampleCalculationManual(DependencyCacheBase):
     """
 
     def __init__(self, x, y):
+        super().__init__()
         self.x = x
         self.y = y
 
@@ -80,6 +82,7 @@ class ExampleCalculationManual(DependencyCacheBase):
 
 class InnerNestedObject(DependencyCacheBase):
     def __init__(self, inner_value):
+        super().__init__()
         self.value = inner_value
 
     @automagically_dependency_cached()
@@ -90,6 +93,7 @@ class InnerNestedObject(DependencyCacheBase):
 
 class OuterNestedObject(DependencyCacheBase):
     def __init__(self, parent_value, child_value):
+        super().__init__()
         self.value = parent_value
         self.inner = InnerNestedObject(child_value)
 

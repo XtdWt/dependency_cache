@@ -65,10 +65,12 @@ impl DependencyCacheDecorator {
         if let Some(cached) = base.borrow().get_cached_value(py, &self.method_name) {
             return Ok(cached);
         }
-        let result = func.call(args, kwargs)?.unbind();
-        base.borrow_mut()
-            .method_dependency_graph
-            .add_dependency(self.method_name.clone(), self.dependencies.clone());
+        let result = func
+            .call(args, kwargs)?
+            .unbind();
+        // base.borrow_mut()
+        //     .method_dependency_graph
+        //     .add_dependency(self.method_name.clone(), self.dependencies.clone());
 
         base.borrow_mut()
             .set_cached_value(&self.method_name, result.clone_ref(py));
