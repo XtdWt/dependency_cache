@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 pub struct MethodDependencyGraph {
-    pub cache_validation: HashMap<String, bool>,
-    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>
+    pub cache_validation: HashMap<String, bool>,  // if not in cache_validation -> ALWAYS invalid
+    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
 }
 
 impl MethodDependencyGraph {
@@ -14,15 +14,6 @@ impl MethodDependencyGraph {
     }
 
     pub fn add_dependency(&mut self, current: String, dependencies: Vec<String>) -> Option<()> {
-        let current_in_cache = self.cache_validation.contains_key(&current);
-        let dependencies_added = dependencies.iter().all(|x| {
-            self.cache_dependency_graph
-                .get(x)
-                .is_some_and(|deps| deps.contains(&current))
-        });
-        if current_in_cache && dependencies_added {
-            return None;
-        }
         self.cache_validation.insert(current.clone(), false);
         for dependent_method in dependencies {
             self.cache_dependency_graph
@@ -36,7 +27,7 @@ impl MethodDependencyGraph {
         return Some(());
     }
 
-    pub fn invalidate(&mut self, current: String) -> Option<()> {
+    pub fn methods_to_invalidate(&self, current: String) -> Vec<String> {
         let mut queue = Vec::new();
         let mut visited = HashSet::new();
         let mut to_invalidate = Vec::new();
@@ -55,9 +46,14 @@ impl MethodDependencyGraph {
                 }
             }
         }
+        return to_invalidate;
+    }
+
+    pub fn invalidate(&mut self, current: String) -> Option<()> {
+        let to_invalidate = self.methods_to_invalidate(current);
 
         for node in to_invalidate {
-            self.cache_validation.insert(node, false);
+            self.cache_validation.entry(node).and_modify(|state| *state = false);
         }
 
         return Some(());
@@ -71,8 +67,8 @@ impl MethodDependencyGraph {
             .unwrap_or(false);
     }
 
-    pub fn validate(&mut self, current: String) -> Option<bool> {
-        return self.cache_validation.insert(current, true);
+    pub fn validate(&mut self, current: String) {
+        self.cache_validation.entry(current).and_modify(|state| *state = true);
     }
 }
 
@@ -178,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_add_dependency_idempotency(){
+    fn test_add_dependency_idempotency() {
         let mut dg = MethodDependencyGraph::new();
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);

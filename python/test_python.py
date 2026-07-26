@@ -13,7 +13,7 @@ class IncorrectInheritance:
 
 class IncorrectMethod(DependencyCacheBase):
     def __init__(self):
-        pass
+        super().__init__()
 
     @dependency_cached()
     def A():
@@ -22,6 +22,7 @@ class IncorrectMethod(DependencyCacheBase):
 
 class SimpleTestObj(DependencyCacheBase):
     def __init__(self, x, y):
+        super().__init__()
         self.x = x
         self.y = y
 
@@ -40,6 +41,7 @@ class SimpleTestObj(DependencyCacheBase):
 
 class HardTestObj(DependencyCacheBase):
     def __init__(self, x, y):
+        super().__init__()
         self.x = x
         self.y = y
 
@@ -66,6 +68,7 @@ class HardTestObj(DependencyCacheBase):
 
 class HarderTestObj(DependencyCacheBase):
     def __init__(self, x, y):
+        super().__init__()
         self.x = x
         self.y = y
 
@@ -96,6 +99,7 @@ class HarderTestObj(DependencyCacheBase):
 
 class CycleTestObj(DependencyCacheBase):
     def __init__(self, x):
+        super().__init__()
         self.x = x
 
     @dependency_cached(dependencies=["B"])
@@ -137,8 +141,8 @@ def test_init(x_value, y_value):
     assert a is not None
     assert a.x == x_value
     assert a.y == y_value
-    assert a.current_graph() == {}
-    assert a.current_cache_validation() == {}
+    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
+    assert a.current_cache_validation() == {"A": False, "B": False, "C": False}
 
 
 @pytest.mark.parametrize(
