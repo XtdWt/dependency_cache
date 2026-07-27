@@ -55,7 +55,7 @@ impl DependencyCacheBase {
             .into_iter()
             .collect();
         for method_name in to_invalidate {
-            graph.cache_validation.remove(&method_name);
+            graph.permanently_invalidate(method_name);
         };
         return Ok(graph);
     }
@@ -92,7 +92,7 @@ impl DependencyCacheBase {
     }
 
     pub fn update_cached_value(&mut self, name: &str, value: Py<PyAny>) {
-        self.method_dependency_graph.invalidate(name.to_string());
+        self.method_dependency_graph.temporarily_invalidate(name.to_string());
         self.cache.insert(name.to_string(), value);
         self.method_dependency_graph.validate(name.to_string());
     }
@@ -101,7 +101,7 @@ impl DependencyCacheBase {
         self.cache.clear();
     }
 
-    pub fn current_cache<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (name, value) in &self.cache {
             dict.set_item(name, value.clone_ref(py))?;
@@ -109,17 +109,17 @@ impl DependencyCacheBase {
         return Ok(dict);
     }
 
-    pub fn current_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (name, value) in &self.method_dependency_graph.cache_dependency_graph {
+        for (name, value) in &self.method_dependency_graph.clone_graph() {
             dict.set_item(name, value)?;
         }
         return Ok(dict);
     }
 
-    pub fn current_cache_validation<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (name, value) in &self.method_dependency_graph.cache_validation {
+        for (name, value) in &self.method_dependency_graph.clone_state() {
             dict.set_item(name, value)?;
         }
         return Ok(dict);
