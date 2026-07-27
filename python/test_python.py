@@ -1,5 +1,5 @@
 import pytest
-from dependency_cache import DependencyCacheBase, dependency_cached
+from dependency_cache import DependencyCacheBase, dependency_cached, plot_dependency_graph
 
 
 class IncorrectInheritance:
@@ -97,23 +97,23 @@ class HarderTestObj(DependencyCacheBase):
         return self.E() + self.D()
 
 
-class CycleTestObj(DependencyCacheBase):
+class UseCacheObj(DependencyCacheBase):
     def __init__(self, x):
         super().__init__()
         self.x = x
 
-    @dependency_cached(dependencies=["B"])
+    @dependency_cached(use_cache=False)
     def A(self):
-        return self.B() + self.x
+        return self.x
 
     @dependency_cached(dependencies=["A"])
     def B(self):
-        return self.A() + self.x
+        return self.A() + 1
 
 
 def test_raises_typeerror():
+    c = IncorrectInheritance()
     with pytest.raises(TypeError):
-        c = IncorrectInheritance()
         c.A()
 
 
@@ -141,8 +141,8 @@ def test_init(x_value, y_value):
     assert a is not None
     assert a.x == x_value
     assert a.y == y_value
-    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
-    assert a.current_cache_validation() == {"A": False, "B": False, "C": False}
+    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
+    assert a.get_validation_state() == {"A": False, "B": False, "C": False}
 
 
 @pytest.mark.parametrize(
@@ -161,12 +161,12 @@ def test_calculation_simple(x_value, y_value, result):
 
     assert a.C() == result
 
-    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": True}
+    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": True}
 
     a.update_cached_value("B", None)
-    assert a.current_graph() == {"A": {"C"}, "B": {"C"}}
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": False}
+    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": False}
 
 
 @pytest.mark.parametrize(
@@ -186,12 +186,12 @@ def test_calculation_hard(x_value, y_value, result1, result2):
     assert a.D() == result1
     assert a.E() == result2
 
-    assert a.current_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}}
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": True, "D": True, "E": True}
+    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": True, "D": True, "E": True}
 
     a.update_cached_value("B", None)
-    assert a.current_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}}
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": False, "D": False, "E": False}
+    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": False, "D": False, "E": False}
 
 
 @pytest.mark.parametrize(
@@ -210,31 +210,37 @@ def test_calculation_harder(x_value, y_value, result):
 
     assert a.F() == result
 
-    assert a.current_graph() == {
+    assert a.get_dependency_graph() == {
         "A": {"C"},
         "B": {"C"},
         "C": {"D", "E"},
         "D": {"F"},
         "E": {"F"},
+        "F": set(),
     }
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": True, "D": True, "E": True, "F": True}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": True, "D": True, "E": True, "F": True}
 
     a.update_cached_value("B", None)
-    assert a.current_graph() == {
+    assert a.get_dependency_graph() == {
         "A": {"C"},
         "B": {"C"},
         "C": {"D", "E"},
         "D": {"F"},
         "E": {"F"},
+        "F": set(),
     }
-    assert a.current_cache_validation() == {"A": True, "B": True, "C": False, "D": False, "E": False, "F": False}
+    assert a.get_validation_state() == {"A": True, "B": True, "C": False, "D": False, "E": False, "F": False}
 
 
-def test_cycles():
-    c = CycleTestObj(0)
-    with pytest.raises(RecursionError):
-        c.A()
+def test_permanently_invalid():
+    c = UseCacheObj(2)
 
-    c = CycleTestObj(1)
-    with pytest.raises(RecursionError):
-        c.A()
+    assert c.get_dependency_graph() == {"A": {"B"}, "B": set()}
+    assert c.get_validation_state() == {}
+
+
+def test_plot_dependency_graph_raises():
+    c = IncorrectInheritance()
+
+    with pytest.raises(TypeError):
+        plot_dependency_graph(c)
