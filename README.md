@@ -30,7 +30,8 @@ maturin develop -r --generate-stubs
 ```
 - run python tests
 ```bash
-pytest
+uv run pytest
+uv run pytest -vv
 ```
 - run rust tests
 ```bash

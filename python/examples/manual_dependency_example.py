@@ -49,6 +49,6 @@ if __name__ == "__main__":
     c = ExampleCalculationManual(6, 7)
     print(f"Result of E = {c.E()}")  # calculates all, prints 26
     c.update_cached_value("A", 0)  # invalidates C, E
-    print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
     print(f"Result of E = {c.E()}")  # recalculates C, E, returns 14
     print(f"Result of D = {c.D()}")  # recalculates D, returns 3.5
