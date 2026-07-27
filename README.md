@@ -1,5 +1,6 @@
 # Dependency Cache
 ## :construction: Work In Progress :construction:
+
 ### Description
 A library for managing the caching of an object's methods with cache invalidation handled by a dependency graph.
 Instead of recomputing expensive, deeply nested calculations on every call, Dependency Cache stores the result and only invalidates (and recalculates) it when one of its dependencies actually changes.
