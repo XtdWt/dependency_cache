@@ -1,28 +1,38 @@
 use std::collections::{HashMap, HashSet};
 
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum ValidationState {
+    Valid,
+    Invalid,
+    PermanentlyInvalid,
+}
+
+
 pub struct MethodDependencyGraph {
-    pub cache_validation: HashMap<String, bool>,  // if not in cache_validation -> ALWAYS invalid
-    pub cache_dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
+    validation_state: HashMap<String, ValidationState>,
+    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
 }
 
 impl MethodDependencyGraph {
     pub fn new() -> Self {
         return MethodDependencyGraph {
-            cache_validation: HashMap::new(),
-            cache_dependency_graph: HashMap::new(),
+            validation_state: HashMap::new(),
+            dependency_graph: HashMap::new(),
         };
     }
 
     pub fn add_dependency(&mut self, current: String, dependencies: Vec<String>) -> Option<()> {
-        self.cache_validation.insert(current.clone(), false);
+        self.validation_state.insert(current.clone(), ValidationState::Invalid);
+        self.dependency_graph.entry(current.clone()).or_default();
         for dependent_method in dependencies {
-            self.cache_dependency_graph
+            self.dependency_graph
                 .entry(dependent_method.clone())
                 .or_default()
                 .insert(current.clone());
-            self.cache_validation
+            self.validation_state
                 .entry(dependent_method)
-                .or_insert(false);
+                .or_insert(ValidationState::Invalid);
         }
         return Some(());
     }
@@ -38,7 +48,7 @@ impl MethodDependencyGraph {
         while let Some(node) = queue.pop() {
             to_invalidate.push(node.clone());
 
-            if let Some(parents) = self.cache_dependency_graph.get(&node) {
+            if let Some(parents) = self.dependency_graph.get(&node) {
                 for p in parents {
                     if visited.insert(p.clone()) {
                         queue.push(p.clone());
@@ -49,26 +59,51 @@ impl MethodDependencyGraph {
         return to_invalidate;
     }
 
-    pub fn invalidate(&mut self, current: String) -> Option<()> {
+    pub fn temporarily_invalidate(&mut self, current: String) -> Option<()> {
         let to_invalidate = self.methods_to_invalidate(current);
 
         for node in to_invalidate {
-            self.cache_validation.entry(node).and_modify(|state| *state = false);
+            self.validation_state.entry(node).and_modify(|state| *state = ValidationState::Invalid);
         }
 
         return Some(());
     }
 
     pub fn is_valid(&self, current: String) -> bool {
-        return self
-            .cache_validation
+        let validity = self
+            .validation_state
             .get(&current)
             .copied()
-            .unwrap_or(false);
+            .unwrap_or(ValidationState::PermanentlyInvalid);
+        match validity {
+            ValidationState::Valid => true,
+            ValidationState::Invalid => false,
+            ValidationState::PermanentlyInvalid => false,
+        }
     }
 
     pub fn validate(&mut self, current: String) {
-        self.cache_validation.entry(current).and_modify(|state| *state = true);
+        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::Valid);
+    }
+
+    pub fn permanently_invalidate(&mut self, current: String) {
+        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::PermanentlyInvalid);
+    }
+
+    pub fn clone_graph(&self) -> HashMap<String, HashSet<String>> {
+        self.dependency_graph
+            .clone()
+    }
+
+    pub fn clone_state(&self) -> HashMap<String, bool> {
+        self.validation_state
+            .iter()
+            .filter_map(|(k, v)| match v {
+                ValidationState::Valid => Some((k.clone(), true)),
+                ValidationState::Invalid => Some((k.clone(), false)),
+                ValidationState::PermanentlyInvalid => None,
+            })
+            .collect()
     }
 }
 
@@ -82,10 +117,10 @@ mod tests {
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
 
         let mut cache_state = HashMap::new();
-        cache_state.insert("A".to_string(), false);
-        cache_state.insert("B".to_string(), false);
-        cache_state.insert("C".to_string(), false);
-        assert_eq!(dg.cache_validation, cache_state);
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::Invalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state);
     }
 
     #[test]
@@ -96,14 +131,14 @@ mod tests {
         dg.add_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()]);
 
         let mut cache_state = HashMap::new();
-        cache_state.insert("A".to_string(), false);
-        cache_state.insert("B".to_string(), false);
-        cache_state.insert("C".to_string(), false);
-        cache_state.insert("D".to_string(), false);
-        cache_state.insert("E".to_string(), false);
-        cache_state.insert("F".to_string(), false);
-        cache_state.insert("G".to_string(), false);
-        assert_eq!(dg.cache_validation, cache_state);
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::Invalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        cache_state.insert("D".to_string(), ValidationState::Invalid);
+        cache_state.insert("E".to_string(), ValidationState::Invalid);
+        cache_state.insert("F".to_string(), ValidationState::Invalid);
+        cache_state.insert("G".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state);
     }
 
     #[test]
@@ -112,9 +147,10 @@ mod tests {
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
 
         let mut graph_state = HashMap::new();
+        graph_state.insert("A".to_string(), HashSet::new());
         graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
-        assert_eq!(dg.cache_dependency_graph, graph_state);
+        assert_eq!(dg.dependency_graph, graph_state);
     }
 
     #[test]
@@ -125,13 +161,14 @@ mod tests {
         dg.add_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()]);
 
         let mut graph_state = HashMap::new();
+        graph_state.insert("A".to_string(), HashSet::new());
         graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
         graph_state.insert("D".to_string(), HashSet::from(["B".to_string()]));
         graph_state.insert("E".to_string(), HashSet::from(["B".to_string()]));
         graph_state.insert("F".to_string(), HashSet::from(["C".to_string()]));
         graph_state.insert("G".to_string(), HashSet::from(["C".to_string()]));
-        assert_eq!(dg.cache_dependency_graph, graph_state);
+        assert_eq!(dg.dependency_graph, graph_state);
     }
 
     #[test]
@@ -164,11 +201,11 @@ mod tests {
         dg.validate("B".to_string());
         dg.validate("C".to_string());
 
-        dg.invalidate("A".to_string());
+        dg.temporarily_invalidate("A".to_string());
         assert!(!dg.is_valid("A".to_string()));
         dg.validate("A".to_string());
 
-        dg.invalidate("B".to_string());
+        dg.temporarily_invalidate("B".to_string());
         assert!(!dg.is_valid("A".to_string()));
         assert!(!dg.is_valid("B".to_string()));
     }
@@ -182,8 +219,9 @@ mod tests {
         dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
 
         let mut graph_state = HashMap::new();
+        graph_state.insert("A".to_string(), HashSet::new());
         graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
-        assert_eq!(dg.cache_dependency_graph, graph_state);
+        assert_eq!(dg.dependency_graph, graph_state);
     }
 }

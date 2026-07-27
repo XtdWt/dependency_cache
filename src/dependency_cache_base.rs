@@ -25,9 +25,9 @@ impl DependencyCacheBase {
         let mut visited = HashSet::new();
         let mut use_cache_methods = HashSet::new();
 
-        for klass in cls.mro().iter() {
-            let klass: Bound<'_, PyType> = klass.extract()?;
-            let namespace = klass.getattr("__dict__")?;
+        for mro_class in cls.mro().iter() {
+            let mro_class: Bound<'_, PyType> = mro_class.extract()?;
+            let namespace = mro_class.getattr("__dict__")?;
 
             for item in namespace.call_method0("items")?.try_iter()? {
                 let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
@@ -55,7 +55,7 @@ impl DependencyCacheBase {
             .into_iter()
             .collect();
         for method_name in to_invalidate {
-            graph.cache_validation.remove(&method_name);
+            graph.permanently_invalidate(method_name);
         };
         return Ok(graph);
     }
@@ -92,7 +92,7 @@ impl DependencyCacheBase {
     }
 
     pub fn update_cached_value(&mut self, name: &str, value: Py<PyAny>) {
-        self.method_dependency_graph.invalidate(name.to_string());
+        self.method_dependency_graph.temporarily_invalidate(name.to_string());
         self.cache.insert(name.to_string(), value);
         self.method_dependency_graph.validate(name.to_string());
     }
@@ -101,7 +101,7 @@ impl DependencyCacheBase {
         self.cache.clear();
     }
 
-    pub fn current_cache<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (name, value) in &self.cache {
             dict.set_item(name, value.clone_ref(py))?;
@@ -109,17 +109,17 @@ impl DependencyCacheBase {
         return Ok(dict);
     }
 
-    pub fn current_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (name, value) in &self.method_dependency_graph.cache_dependency_graph {
+        for (name, value) in &self.method_dependency_graph.clone_graph() {
             dict.set_item(name, value)?;
         }
         return Ok(dict);
     }
 
-    pub fn current_cache_validation<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (name, value) in &self.method_dependency_graph.cache_validation {
+        for (name, value) in &self.method_dependency_graph.clone_state() {
             dict.set_item(name, value)?;
         }
         return Ok(dict);

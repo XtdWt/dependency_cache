@@ -44,4 +44,4 @@ if __name__ == "__main__":
     print(f"Result of B = {c.B()}")  # calculates all, prints 2.5
 
     print(f"Result of B = {c.B()}")  # prints 2.5
-    print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())

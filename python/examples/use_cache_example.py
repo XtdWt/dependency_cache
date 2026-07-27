@@ -25,6 +25,6 @@ if __name__ == "__main__":
         print("A (always recalcs)")
         c = UseCacheExample()
         print(f"Result of B = {c.B()}")  # calculates all
-        print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+        print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
         print(f"Result of B = {c.B()}")  # still calculates all
-        print(c.current_cache(), c.current_graph(), c.current_cache_validation())
+        print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())

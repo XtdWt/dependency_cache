@@ -30,7 +30,8 @@ maturin develop -r --generate-stubs
 ```
 - run python tests
 ```bash
-pytest
+uv run pytest
+uv run pytest -vv
 ```
 - run rust tests
 ```bash
@@ -88,6 +89,5 @@ This project is still a work in progress, with everything from API to underlying
 
 Current TODO list:
 - load and dump cache methods for base class
-- validate MRO inheritance behaviour and add example
 - move automagic parsing to rust side instead of python
 - add object thread safety for python 3.14+
