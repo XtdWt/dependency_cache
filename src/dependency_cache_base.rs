@@ -25,9 +25,9 @@ impl DependencyCacheBase {
         let mut visited = HashSet::new();
         let mut use_cache_methods = HashSet::new();
 
-        for klass in cls.mro().iter() {
-            let klass: Bound<'_, PyType> = klass.extract()?;
-            let namespace = klass.getattr("__dict__")?;
+        for mro_class in cls.mro().iter() {
+            let mro_class: Bound<'_, PyType> = mro_class.extract()?;
+            let namespace = mro_class.getattr("__dict__")?;
 
             for item in namespace.call_method0("items")?.try_iter()? {
                 let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
