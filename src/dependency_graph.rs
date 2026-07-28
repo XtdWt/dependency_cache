@@ -11,7 +11,7 @@ enum ValidationState {
 
 pub struct MethodDependencyGraph {
     validation_state: HashMap<String, ValidationState>,
-    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
+    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to set[parents_name], for ease of traversal
 }
 
 impl MethodDependencyGraph {
@@ -62,8 +62,15 @@ impl MethodDependencyGraph {
     pub fn temporarily_invalidate(&mut self, current: String) -> Option<()> {
         let to_invalidate = self.methods_to_invalidate(current);
 
-        for node in to_invalidate {
-            self.validation_state.entry(node).and_modify(|state| *state = ValidationState::Invalid);
+        for method in to_invalidate {
+            let validity = self.validation_state.get(&method).unwrap_or(&ValidationState::PermanentlyInvalid);
+            match validity {
+                ValidationState::Valid => {
+                    self.validation_state.entry(method).and_modify(|s| *s = ValidationState::Invalid);
+                },
+                ValidationState::Invalid => (),
+                ValidationState::PermanentlyInvalid => (),
+            }
         }
 
         return Some(());
@@ -73,8 +80,7 @@ impl MethodDependencyGraph {
         let validity = self
             .validation_state
             .get(&current)
-            .copied()
-            .unwrap_or(ValidationState::PermanentlyInvalid);
+            .unwrap_or(&ValidationState::PermanentlyInvalid);
         match validity {
             ValidationState::Valid => true,
             ValidationState::Invalid => false,
@@ -83,11 +89,24 @@ impl MethodDependencyGraph {
     }
 
     pub fn validate(&mut self, current: String) {
-        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::Valid);
+        let validity = self
+            .validation_state
+            .get(&current)
+            .unwrap_or(&ValidationState::PermanentlyInvalid);
+        match validity {
+            ValidationState::Valid => (),
+            ValidationState::Invalid => {
+                self.validation_state.entry(current).and_modify(|s| *s = ValidationState::Valid);
+            },
+            ValidationState::PermanentlyInvalid => (),
+        }
     }
 
     pub fn permanently_invalidate(&mut self, current: String) {
-        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::PermanentlyInvalid);
+        self.validation_state
+            .entry(current)
+            .and_modify(|state| *state = ValidationState::PermanentlyInvalid)
+            .or_insert(ValidationState::PermanentlyInvalid);
     }
 
     pub fn clone_graph(&self) -> HashMap<String, HashSet<String>> {
@@ -95,13 +114,13 @@ impl MethodDependencyGraph {
             .clone()
     }
 
-    pub fn clone_state(&self) -> HashMap<String, bool> {
+    pub fn clone_state(&self) -> HashMap<String, String> {
         self.validation_state
             .iter()
-            .filter_map(|(k, v)| match v {
-                ValidationState::Valid => Some((k.clone(), true)),
-                ValidationState::Invalid => Some((k.clone(), false)),
-                ValidationState::PermanentlyInvalid => None,
+            .map(|(k, v)| match v {
+                ValidationState::Valid => (k.clone(), "valid".to_string()),
+                ValidationState::Invalid => (k.clone(), "invalid".to_string()),
+                ValidationState::PermanentlyInvalid => (k.clone(), "permanently invalid".to_string()),
             })
             .collect()
     }
@@ -224,4 +243,10 @@ mod tests {
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
         assert_eq!(dg.dependency_graph, graph_state);
     }
+
+    #[test]
+    fn test_attempt_to_validate_permanently_invalid_state() {}
+
+    #[test]
+    fn test_attempt_to_invalidate_permanently_invalid_state() {}
 }

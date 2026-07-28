@@ -142,7 +142,7 @@ def test_init(x_value, y_value):
     assert a.x == x_value
     assert a.y == y_value
     assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": False, "B": False, "C": False}
+    assert a.get_validation_state() == {"A": "invalid", "B": "invalid", "C": "invalid"}
 
 
 @pytest.mark.parametrize(
@@ -162,11 +162,11 @@ def test_calculation_simple(x_value, y_value, result):
     assert a.C() == result
 
     assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": True, "B": True, "C": True}
+    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "valid"}
 
     a.update_cached_value("B", None)
     assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": True, "B": True, "C": False}
+    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "invalid"}
 
 
 @pytest.mark.parametrize(
@@ -187,11 +187,11 @@ def test_calculation_hard(x_value, y_value, result1, result2):
     assert a.E() == result2
 
     assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
-    assert a.get_validation_state() == {"A": True, "B": True, "C": True, "D": True, "E": True}
+    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "valid", "D": "valid", "E": "valid"}
 
     a.update_cached_value("B", None)
     assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
-    assert a.get_validation_state() == {"A": True, "B": True, "C": False, "D": False, "E": False}
+    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "invalid", "D": "invalid", "E": "invalid"}
 
 
 @pytest.mark.parametrize(
@@ -218,7 +218,14 @@ def test_calculation_harder(x_value, y_value, result):
         "E": {"F"},
         "F": set(),
     }
-    assert a.get_validation_state() == {"A": True, "B": True, "C": True, "D": True, "E": True, "F": True}
+    assert a.get_validation_state() == {
+        "A": "valid",
+        "B": "valid",
+        "C": "valid",
+        "D": "valid",
+        "E": "valid",
+        "F": "valid",
+    }
 
     a.update_cached_value("B", None)
     assert a.get_dependency_graph() == {
@@ -229,14 +236,21 @@ def test_calculation_harder(x_value, y_value, result):
         "E": {"F"},
         "F": set(),
     }
-    assert a.get_validation_state() == {"A": True, "B": True, "C": False, "D": False, "E": False, "F": False}
+    assert a.get_validation_state() == {
+        "A": "valid",
+        "B": "valid",
+        "C": "invalid",
+        "D": "invalid",
+        "E": "invalid",
+        "F": "invalid",
+    }
 
 
 def test_permanently_invalid():
     c = UseCacheObj(2)
 
     assert c.get_dependency_graph() == {"A": {"B"}, "B": set()}
-    assert c.get_validation_state() == {}
+    assert c.get_validation_state() == {"A": "permanently invalid", "B": "permanently invalid"}
 
 
 def test_plot_dependency_graph_raises():

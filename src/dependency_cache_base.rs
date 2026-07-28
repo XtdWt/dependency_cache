@@ -48,9 +48,7 @@ impl DependencyCacheBase {
         }
         let to_invalidate: Vec<String> = use_cache_methods
             .iter()
-            .map(|x| graph.methods_to_invalidate(x.to_string()))
-            .into_iter()
-            .flatten()
+            .flat_map(|x| graph.methods_to_invalidate(x.to_string()))
             .collect::<HashSet<String>>()
             .into_iter()
             .collect();
