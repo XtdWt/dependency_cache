@@ -11,7 +11,7 @@ enum ValidationState {
 
 pub struct MethodDependencyGraph {
     validation_state: HashMap<String, ValidationState>,
-    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to Vec<parents_name>, for ease of traversal
+    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to set[parents_name], for ease of traversal
 }
 
 impl MethodDependencyGraph {
@@ -22,36 +22,36 @@ impl MethodDependencyGraph {
         };
     }
 
-    pub fn add_dependency(&mut self, current: String, dependencies: Vec<String>) -> Option<()> {
-        self.validation_state.insert(current.clone(), ValidationState::Invalid);
-        self.dependency_graph.entry(current.clone()).or_default();
+    pub fn add_dependency(&mut self, method: String, dependencies: Vec<String>) -> () {
+        self.validation_state.insert(method.clone(), ValidationState::Invalid);
+        self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
             self.dependency_graph
                 .entry(dependent_method.clone())
                 .or_default()
-                .insert(current.clone());
+                .insert(method.clone());
             self.validation_state
                 .entry(dependent_method)
                 .or_insert(ValidationState::Invalid);
         }
-        return Some(());
+        return ();
     }
 
-    pub fn methods_to_invalidate(&self, current: String) -> Vec<String> {
+    pub fn methods_to_invalidate(&self, method: String) -> Vec<String> {
         let mut queue = Vec::new();
         let mut visited = HashSet::new();
         let mut to_invalidate = Vec::new();
 
-        queue.push(current.clone());
-        visited.insert(current.clone());
+        queue.push(method.clone());
+        visited.insert(method.clone());
 
-        while let Some(node) = queue.pop() {
-            to_invalidate.push(node.clone());
+        while let Some(current_method) = queue.pop() {
+            to_invalidate.push(current_method.clone());
 
-            if let Some(parents) = self.dependency_graph.get(&node) {
-                for p in parents {
-                    if visited.insert(p.clone()) {
-                        queue.push(p.clone());
+            if let Some(parent_methods) = self.dependency_graph.get(&current_method) {
+                for parent_method in parent_methods {
+                    if visited.insert(parent_method.clone()) {
+                        queue.push(parent_method.clone());
                     }
                 }
             }
@@ -59,51 +59,70 @@ impl MethodDependencyGraph {
         return to_invalidate;
     }
 
-    pub fn temporarily_invalidate(&mut self, current: String) -> Option<()> {
-        let to_invalidate = self.methods_to_invalidate(current);
+    pub fn temporarily_invalidate(&mut self, method: String) -> () {
+        let to_invalidate = self.methods_to_invalidate(method);
 
-        for node in to_invalidate {
-            self.validation_state.entry(node).and_modify(|state| *state = ValidationState::Invalid);
+        for invalid_methods in to_invalidate {
+            let validity = self.validation_state.get(&invalid_methods).unwrap_or(&ValidationState::PermanentlyInvalid);
+            match validity {
+                ValidationState::Valid => {
+                    self.validation_state.entry(invalid_methods).and_modify(|s| *s = ValidationState::Invalid);
+                },
+                ValidationState::Invalid => (),
+                ValidationState::PermanentlyInvalid => (),
+            }
         }
 
-        return Some(());
+        return ();
     }
 
-    pub fn is_valid(&self, current: String) -> bool {
-        let validity = self
-            .validation_state
-            .get(&current)
-            .copied()
-            .unwrap_or(ValidationState::PermanentlyInvalid);
-        match validity {
+    pub fn is_valid(&self, method: String) -> bool {
+        let validity = self.validation_state
+            .get(&method)
+            .unwrap_or(&ValidationState::PermanentlyInvalid);
+        return match validity {
             ValidationState::Valid => true,
             ValidationState::Invalid => false,
             ValidationState::PermanentlyInvalid => false,
+        };
+    }
+
+    pub fn validate(&mut self, method: String) -> () {
+        let validity = self.validation_state
+            .get(&method)
+            .unwrap_or(&ValidationState::PermanentlyInvalid);
+        match validity {
+            ValidationState::Valid => (),
+            ValidationState::Invalid => {
+                self.validation_state.entry(method).and_modify(|s| *s = ValidationState::Valid);
+            },
+            ValidationState::PermanentlyInvalid => (),
         }
+        return ();
     }
 
-    pub fn validate(&mut self, current: String) {
-        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::Valid);
-    }
-
-    pub fn permanently_invalidate(&mut self, current: String) {
-        self.validation_state.entry(current).and_modify(|state| *state = ValidationState::PermanentlyInvalid);
+    pub fn permanently_invalidate(&mut self, method: String) -> () {
+        self.validation_state
+            .entry(method)
+            .and_modify(|state| *state = ValidationState::PermanentlyInvalid)
+            .or_insert(ValidationState::PermanentlyInvalid);
+        return ();
     }
 
     pub fn clone_graph(&self) -> HashMap<String, HashSet<String>> {
-        self.dependency_graph
-            .clone()
+        return self.dependency_graph
+            .clone();
     }
 
-    pub fn clone_state(&self) -> HashMap<String, bool> {
-        self.validation_state
+    pub fn clone_state(&self) -> HashMap<String, String> {
+        return self.validation_state
             .iter()
-            .filter_map(|(k, v)| match v {
-                ValidationState::Valid => Some((k.clone(), true)),
-                ValidationState::Invalid => Some((k.clone(), false)),
-                ValidationState::PermanentlyInvalid => None,
+            .map(|(k, v)| match v {
+                ValidationState::Valid => (k.clone(), "valid".to_string()),
+                ValidationState::Invalid => (k.clone(), "invalid".to_string()),
+                ValidationState::PermanentlyInvalid => (k.clone(), "permanently invalid".to_string()),
             })
-            .collect()
+            .collect();
     }
 }
 
@@ -223,5 +242,81 @@ mod tests {
         graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
         assert_eq!(dg.dependency_graph, graph_state);
+    }
+
+    #[test]
+    fn test_attempt_to_validate_permanently_invalid_state() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        dg.permanently_invalidate("B".to_string());
+
+        dg.validate("B".to_string());
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::PermanentlyInvalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state)
+    }
+
+    #[test]
+    fn test_attempt_to_invalidate_permanently_invalid_state() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        dg.permanently_invalidate("B".to_string());
+
+        dg.temporarily_invalidate("B".to_string());
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::PermanentlyInvalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state)
+    }
+
+    #[test]
+    fn test_clones_default() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), "invalid".to_string());
+        cache_state.insert("B".to_string(), "invalid".to_string());
+        cache_state.insert("C".to_string(), "invalid".to_string());
+
+        assert_eq!(dg.clone_state(), cache_state);
+
+        let mut graph_state = HashMap::new();
+        graph_state.insert("A".to_string(), HashSet::new());
+        graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
+
+        assert_eq!(dg.clone_graph(), graph_state);
+    }
+
+    #[test]
+    fn test_clones_after_mutation() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.validate("A".to_string());
+        dg.permanently_invalidate("B".to_string());
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), "valid".to_string());
+        cache_state.insert("B".to_string(), "permanently invalid".to_string());
+        cache_state.insert("C".to_string(), "invalid".to_string());
+
+        assert_eq!(dg.clone_state(), cache_state);
+
+        dg.add_dependency("B".to_string(), vec!["D".to_string()]);
+
+        let mut graph_state = HashMap::new();
+        graph_state.insert("A".to_string(), HashSet::new());
+        graph_state.insert("B".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
+        graph_state.insert("D".to_string(), HashSet::from(["B".to_string()]));
+        assert_eq!(dg.clone_graph(), graph_state);
     }
 }
