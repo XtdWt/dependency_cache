@@ -22,14 +22,14 @@ impl MethodDependencyGraph {
         };
     }
 
-    pub fn add_dependency(&mut self, current: String, dependencies: Vec<String>) -> Option<()> {
-        self.validation_state.insert(current.clone(), ValidationState::Invalid);
-        self.dependency_graph.entry(current.clone()).or_default();
+    pub fn add_dependency(&mut self, method: String, dependencies: Vec<String>) -> Option<()> {
+        self.validation_state.insert(method.clone(), ValidationState::Invalid);
+        self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
             self.dependency_graph
                 .entry(dependent_method.clone())
                 .or_default()
-                .insert(current.clone());
+                .insert(method.clone());
             self.validation_state
                 .entry(dependent_method)
                 .or_insert(ValidationState::Invalid);
@@ -37,13 +37,13 @@ impl MethodDependencyGraph {
         return Some(());
     }
 
-    pub fn methods_to_invalidate(&self, current: String) -> Vec<String> {
+    pub fn methods_to_invalidate(&self, method: String) -> Vec<String> {
         let mut queue = Vec::new();
         let mut visited = HashSet::new();
         let mut to_invalidate = Vec::new();
 
-        queue.push(current.clone());
-        visited.insert(current.clone());
+        queue.push(method.clone());
+        visited.insert(method.clone());
 
         while let Some(node) = queue.pop() {
             to_invalidate.push(node.clone());
@@ -59,14 +59,14 @@ impl MethodDependencyGraph {
         return to_invalidate;
     }
 
-    pub fn temporarily_invalidate(&mut self, current: String) -> Option<()> {
-        let to_invalidate = self.methods_to_invalidate(current);
+    pub fn temporarily_invalidate(&mut self, method: String) -> Option<()> {
+        let to_invalidate = self.methods_to_invalidate(method);
 
-        for method in to_invalidate {
-            let validity = self.validation_state.get(&method).unwrap_or(&ValidationState::PermanentlyInvalid);
+        for invalid_methods in to_invalidate {
+            let validity = self.validation_state.get(&invalid_methods).unwrap_or(&ValidationState::PermanentlyInvalid);
             match validity {
                 ValidationState::Valid => {
-                    self.validation_state.entry(method).and_modify(|s| *s = ValidationState::Invalid);
+                    self.validation_state.entry(invalid_methods).and_modify(|s| *s = ValidationState::Invalid);
                 },
                 ValidationState::Invalid => (),
                 ValidationState::PermanentlyInvalid => (),
@@ -76,10 +76,10 @@ impl MethodDependencyGraph {
         return Some(());
     }
 
-    pub fn is_valid(&self, current: String) -> bool {
+    pub fn is_valid(&self, method: String) -> bool {
         let validity = self
             .validation_state
-            .get(&current)
+            .get(&method)
             .unwrap_or(&ValidationState::PermanentlyInvalid);
         match validity {
             ValidationState::Valid => true,
@@ -88,23 +88,23 @@ impl MethodDependencyGraph {
         }
     }
 
-    pub fn validate(&mut self, current: String) {
+    pub fn validate(&mut self, method: String) {
         let validity = self
             .validation_state
-            .get(&current)
+            .get(&method)
             .unwrap_or(&ValidationState::PermanentlyInvalid);
         match validity {
             ValidationState::Valid => (),
             ValidationState::Invalid => {
-                self.validation_state.entry(current).and_modify(|s| *s = ValidationState::Valid);
+                self.validation_state.entry(method).and_modify(|s| *s = ValidationState::Valid);
             },
             ValidationState::PermanentlyInvalid => (),
         }
     }
 
-    pub fn permanently_invalidate(&mut self, current: String) {
+    pub fn permanently_invalidate(&mut self, method: String) {
         self.validation_state
-            .entry(current)
+            .entry(method)
             .and_modify(|state| *state = ValidationState::PermanentlyInvalid)
             .or_insert(ValidationState::PermanentlyInvalid);
     }
@@ -245,8 +245,34 @@ mod tests {
     }
 
     #[test]
-    fn test_attempt_to_validate_permanently_invalid_state() {}
+    fn test_attempt_to_validate_permanently_invalid_state() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        dg.permanently_invalidate("B".to_string());
+
+        dg.validate("B".to_string());
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::PermanentlyInvalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state)
+    }
 
     #[test]
-    fn test_attempt_to_invalidate_permanently_invalid_state() {}
+    fn test_attempt_to_invalidate_permanently_invalid_state() {
+        let mut dg = MethodDependencyGraph::new();
+        dg.add_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+
+        dg.permanently_invalidate("B".to_string());
+
+        dg.temporarily_invalidate("B".to_string());
+
+        let mut cache_state = HashMap::new();
+        cache_state.insert("A".to_string(), ValidationState::Invalid);
+        cache_state.insert("B".to_string(), ValidationState::PermanentlyInvalid);
+        cache_state.insert("C".to_string(), ValidationState::Invalid);
+        assert_eq!(dg.validation_state, cache_state)
+    }
 }
