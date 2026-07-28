@@ -22,7 +22,7 @@ impl MethodDependencyGraph {
         };
     }
 
-    pub fn add_dependency(&mut self, method: String, dependencies: Vec<String>) -> Option<()> {
+    pub fn add_dependency(&mut self, method: String, dependencies: Vec<String>) -> () {
         self.validation_state.insert(method.clone(), ValidationState::Invalid);
         self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
@@ -34,7 +34,7 @@ impl MethodDependencyGraph {
                 .entry(dependent_method)
                 .or_insert(ValidationState::Invalid);
         }
-        return Some(());
+        return ();
     }
 
     pub fn methods_to_invalidate(&self, method: String) -> Vec<String> {
@@ -59,7 +59,7 @@ impl MethodDependencyGraph {
         return to_invalidate;
     }
 
-    pub fn temporarily_invalidate(&mut self, method: String) -> Option<()> {
+    pub fn temporarily_invalidate(&mut self, method: String) -> () {
         let to_invalidate = self.methods_to_invalidate(method);
 
         for invalid_methods in to_invalidate {
@@ -73,7 +73,7 @@ impl MethodDependencyGraph {
             }
         }
 
-        return Some(());
+        return ();
     }
 
     pub fn is_valid(&self, method: String) -> bool {
@@ -81,14 +81,14 @@ impl MethodDependencyGraph {
             .validation_state
             .get(&method)
             .unwrap_or(&ValidationState::PermanentlyInvalid);
-        match validity {
+        return match validity {
             ValidationState::Valid => true,
             ValidationState::Invalid => false,
             ValidationState::PermanentlyInvalid => false,
-        }
+        };
     }
 
-    pub fn validate(&mut self, method: String) {
+    pub fn validate(&mut self, method: String) -> () {
         let validity = self
             .validation_state
             .get(&method)
@@ -100,29 +100,31 @@ impl MethodDependencyGraph {
             },
             ValidationState::PermanentlyInvalid => (),
         }
+        return ();
     }
 
-    pub fn permanently_invalidate(&mut self, method: String) {
+    pub fn permanently_invalidate(&mut self, method: String) -> () {
         self.validation_state
             .entry(method)
             .and_modify(|state| *state = ValidationState::PermanentlyInvalid)
             .or_insert(ValidationState::PermanentlyInvalid);
+        return ();
     }
 
     pub fn clone_graph(&self) -> HashMap<String, HashSet<String>> {
-        self.dependency_graph
-            .clone()
+        return self.dependency_graph
+            .clone();
     }
 
     pub fn clone_state(&self) -> HashMap<String, String> {
-        self.validation_state
+        return self.validation_state
             .iter()
             .map(|(k, v)| match v {
                 ValidationState::Valid => (k.clone(), "valid".to_string()),
                 ValidationState::Invalid => (k.clone(), "invalid".to_string()),
                 ValidationState::PermanentlyInvalid => (k.clone(), "permanently invalid".to_string()),
             })
-            .collect()
+            .collect();
     }
 }
 
