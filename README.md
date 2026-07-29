@@ -91,4 +91,5 @@ Current TODO list (in no particular order):
 - load and dump cache methods for base class
 - decide what to do with methods that take arguments for caching
 - move plot_dependency_graph to rust side instead of python
+- refactor automagic parser code
 - add object thread safety for python 3.14+
