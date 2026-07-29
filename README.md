@@ -87,7 +87,9 @@ uv run ./python/examples/example.py
 ### TODOs
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
-Current TODO list:
+Current TODO list (in no particular order):
 - load and dump cache methods for base class
+- decide what to do with methods that take arguments for caching
+- move plot_dependency_graph to rust side instead of python
 - move automagic parsing to rust side instead of python
 - add object thread safety for python 3.14+
