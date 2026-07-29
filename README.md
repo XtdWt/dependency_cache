@@ -12,7 +12,7 @@ This project is written in rust, with [pyo3](https://github.com/PyO3/pyo3), and 
 |---|---|
 | `DependencyCacheBase` | Base class to inherit from. Gives your instance a cache and a dependency graph. |
 | `dependency_cached(use_cache=True, dependencies=[...])` | A footgun-enabled :gun: decorator for a method where you **explicitly declare** direct dependencies. |
-| `automagically_dependency_cached(use_cache=True, dependencies=[...])` | A decorator which **automagically infers** the direct dependencies with the option to override manually with `dependencies=`. |
+| `automagically_dependency_cached(use_cache=True, dependencies=[...])` | A decorator which **automagically infers** the direct dependencies with the option to override manually using `dependencies=`. |
 | `plot_dependency_graph(obj, **kwargs)` | Visualizes an instance's dependency graph, for inspection/debugging. |
 
 ### Setup
@@ -87,7 +87,9 @@ uv run ./python/examples/example.py
 ### TODOs
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
-Current TODO list:
+Current TODO list (in no particular order):
 - load and dump cache methods for base class
-- move automagic parsing to rust side instead of python
+- decide what to do with methods that take arguments for caching
+- move plot_dependency_graph to rust side instead of python
+- refactor automagic parser code
 - add object thread safety for python 3.14+

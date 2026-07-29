@@ -6,7 +6,7 @@ mod decorator_factory;
 use pyo3::prelude::*;
 
 use dependency_cache_base::DependencyCacheBase;
-use decorator_factory::DependencyCacheDecoratorFactory;
+use decorator_factory::{ManualDependencyCacheDecoratorFactory, AutomagicDependencyCacheDecoratorFactory};
 
 
 #[pymodule]
@@ -16,5 +16,8 @@ mod dependency_cache {
     use super::DependencyCacheBase;
 
     #[pymodule_export]
-    use super::DependencyCacheDecoratorFactory;
+    use super::ManualDependencyCacheDecoratorFactory;
+
+    #[pymodule_export]
+    use super::AutomagicDependencyCacheDecoratorFactory;
 }
