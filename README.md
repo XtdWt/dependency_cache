@@ -12,7 +12,7 @@ This project is written in rust, with [pyo3](https://github.com/PyO3/pyo3), and 
 |---|---|
 | `DependencyCacheBase` | Base class to inherit from. Gives your instance a cache and a dependency graph. |
 | `dependency_cached(use_cache=True, dependencies=[...])` | A footgun-enabled :gun: decorator for a method where you **explicitly declare** direct dependencies. |
-| `automagically_dependency_cached(use_cache=True, dependencies=[...])` | A decorator which **automagically infers** the direct dependencies with the option to override manually with `dependencies=`. |
+| `automagically_dependency_cached(use_cache=True, dependencies=[...])` | A decorator which **automagically infers** the direct dependencies with the option to override manually using `dependencies=`. |
 | `plot_dependency_graph(obj, **kwargs)` | Visualizes an instance's dependency graph, for inspection/debugging. |
 
 ### Setup
