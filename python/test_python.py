@@ -104,6 +104,7 @@ class UseCacheObj(DependencyCacheBase):
 
     @dependency_cached(use_cache=False)
     def A(self):
+        print("calculating A!")
         return self.x
 
     @dependency_cached(dependencies=["A"])
@@ -141,8 +142,8 @@ def test_init(x_value, y_value):
     assert a is not None
     assert a.x == x_value
     assert a.y == y_value
-    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": "invalid", "B": "invalid", "C": "invalid"}
+    assert a.get_dependency_graph() == {}
+    assert a.get_validation_state() == {}
 
 
 @pytest.mark.parametrize(
@@ -248,7 +249,9 @@ def test_calculation_harder(x_value, y_value, result):
 
 def test_permanently_invalid():
     c = UseCacheObj(2)
-
+    assert c.get_dependency_graph() == {}
+    assert c.get_validation_state() == {}
+    c.B()
     assert c.get_dependency_graph() == {"A": {"B"}, "B": set()}
     assert c.get_validation_state() == {"A": "permanently invalid", "B": "permanently invalid"}
 
