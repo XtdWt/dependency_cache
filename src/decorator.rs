@@ -62,7 +62,7 @@ impl DependencyCacheDecorator {
         // 1. add/check child dependencies
         base.borrow_mut().add_children_dependencies(&self.method_name, self.dependencies.clone());
 
-        // 2. add/check parent dependencies
+        // 2. add/check parent dependencies, push function stack
         let parent_status = base.borrow().current_call_stack_top();
         if let Some((parent, add_dependency_parent)) = parent_status {
             if add_dependency_parent {
