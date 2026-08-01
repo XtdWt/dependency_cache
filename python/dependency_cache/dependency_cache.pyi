@@ -14,10 +14,20 @@ class DependencyCacheBase:
 class automagically_dependency_cached:
     def __call__(self, /, func: Any) -> Any: ...
     def __new__(
-        cls, /, use_cache: bool = True, dependencies: Sequence[str] = ...
+        cls,
+        /,
+        use_cache: bool = True,
+        dependencies: Sequence[str] = ...,
+        track_runtime_dependencies: bool = True,
     ) -> automagically_dependency_cached: ...
 
 @final
 class dependency_cached:
     def __call__(self, /, func: Any) -> Any: ...
-    def __new__(cls, /, use_cache: bool = True, dependencies: Sequence[str] = ...) -> dependency_cached: ...
+    def __new__(
+        cls,
+        /,
+        use_cache: bool = True,
+        dependencies: Sequence[str] = ...,
+        track_runtime_dependencies: bool = False,
+    ) -> dependency_cached: ...

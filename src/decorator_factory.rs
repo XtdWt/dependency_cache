@@ -9,16 +9,18 @@ use crate::decorator::DependencyCacheDecorator;
 pub struct ManualDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<String>,
+    track_runtime_dependencies: bool,
 }
 
 #[pymethods]
 impl ManualDependencyCacheDecoratorFactory {
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=vec![]))]
-    fn new(use_cache: bool, dependencies: Vec<String>) -> Self {
+    #[pyo3(signature = (use_cache=true, dependencies=vec![], track_runtime_dependencies=false))]
+    fn new(use_cache: bool, dependencies: Vec<String>, track_runtime_dependencies: bool) -> Self {
         return Self {
             use_cache,
             dependencies,
+            track_runtime_dependencies,
         };
     }
 
@@ -30,7 +32,7 @@ impl ManualDependencyCacheDecoratorFactory {
                 use_cache: self.use_cache,
                 dependencies: self.dependencies.clone(),
                 method_name,
-                add_parent_dependencies: false,
+                track_runtime_dependencies: self.track_runtime_dependencies,
             }
         );
     }
@@ -41,16 +43,18 @@ impl ManualDependencyCacheDecoratorFactory {
 pub struct AutomagicDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<String>,
+    track_runtime_dependencies: bool,
 }
 
 #[pymethods]
 impl AutomagicDependencyCacheDecoratorFactory {
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=vec![]))]
-    fn new(use_cache: bool, dependencies: Vec<String>) -> Self {
+    #[pyo3(signature = (use_cache=true, dependencies=vec![], track_runtime_dependencies=true))]
+    fn new(use_cache: bool, dependencies: Vec<String>, track_runtime_dependencies: bool) -> Self {
         return Self {
             use_cache,
             dependencies,
+            track_runtime_dependencies,
         };
     }
 
@@ -67,7 +71,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
                 use_cache: self.use_cache,
                 dependencies: self.dependencies.clone(),
                 method_name,
-                add_parent_dependencies: true,
+                track_runtime_dependencies: self.track_runtime_dependencies,
             }
         );
     }

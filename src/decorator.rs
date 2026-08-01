@@ -10,7 +10,7 @@ pub struct DependencyCacheDecorator {
     pub use_cache: bool,
     pub dependencies: Vec<String>,
     pub method_name: String,
-    pub add_parent_dependencies: bool,
+    pub track_runtime_dependencies: bool,
 }
 
 #[pymethods]
@@ -64,12 +64,12 @@ impl DependencyCacheDecorator {
 
         // 2. add/check parent dependencies, push function stack
         let parent_status = base.borrow().current_call_stack_top();
-        if let Some((parent, add_dependency_parent)) = parent_status {
-            if add_dependency_parent {
+        if let Some((parent, parent_use_runtime_deps)) = parent_status {
+            if parent_use_runtime_deps {
                 base.borrow_mut().add_parent_dependency(&parent, &self.method_name);
             }
         }
-        base.borrow_mut().push_call_stack(self.method_name.clone(), self.add_parent_dependencies);
+        base.borrow_mut().push_call_stack(self.method_name.clone(), self.track_runtime_dependencies);
 
         let outcome = (|| -> PyResult<Py<PyAny>> {
             // 3. check cache for value
