@@ -8,7 +8,7 @@ use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
     pub cache: HashMap<String, Py<PyAny>>,
-    pub method_dependency_graph: MethodDependencyGraph,
+    pub method_dependency_graph: MethodDependencyGraph<String>,
     pub call_stack: Vec<(String, bool)>,
 }
 
@@ -20,7 +20,7 @@ impl DependencyCacheBase {
         self.cache.insert(name.to_string(), value);
     }
 
-    pub fn validate_current_method(&mut self, method: &str, use_cache: bool) {
+    pub fn validate_current_method(&mut self, method: &String, use_cache: bool) {
         if !use_cache {
             self.method_dependency_graph.permanently_invalidate(method.to_string());
         }

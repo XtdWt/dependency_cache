@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::hash::Hash;
 
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -7,14 +8,17 @@ pub enum ValidationState {
     Invalid,
     PermanentlyInvalid,
 }
-
-
-pub struct MethodDependencyGraph {
-    validation_state: HashMap<String, ValidationState>,
-    dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to set[parents_name], for ease of traversal
+pub struct MethodDependencyGraph<T> {
+    validation_state: HashMap<T, ValidationState>,
+    dependency_graph: HashMap<T, HashSet<T>>,  // maps child_name to set[parents_name], for ease of traversal
 }
 
-impl MethodDependencyGraph {
+// pub struct MethodDependencyGraph<T> {
+//     validation_state: HashMap<String, ValidationState>,
+//     dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to set[parents_name], for ease of traversal
+// }
+
+impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
     pub fn new() -> Self {
         return MethodDependencyGraph {
             validation_state: HashMap::new(),
@@ -22,11 +26,11 @@ impl MethodDependencyGraph {
         };
     }
 
-    pub fn get_method_state_as_enum(&self, method: &str) -> &ValidationState {
+    pub fn get_method_state_as_enum(&self, method: &T) -> &ValidationState {
         return self.validation_state.get(method).unwrap_or(&ValidationState::PermanentlyInvalid);
     }
 
-    pub fn list_child_methods(&self, method: &str) -> Vec<String> {
+    pub fn list_child_methods(&self, method: &T) -> Vec<T> {
         self.dependency_graph
             .iter()
             .filter(|(_, parents)| parents.contains(method))
@@ -34,7 +38,7 @@ impl MethodDependencyGraph {
             .collect()
     }
 
-    pub fn add_children_dependency(&mut self, method: String, dependencies: Vec<String>) -> () {
+    pub fn add_children_dependency(&mut self, method: T, dependencies: Vec<T>) -> () {
         if self.validation_state.contains_key(&method) {
             return ();
         }
@@ -49,7 +53,7 @@ impl MethodDependencyGraph {
         return ();
     }
 
-    pub fn add_parent_dependency(&mut self, method: String, dependencies: Vec<String>) -> () {
+    pub fn add_parent_dependency(&mut self, method: T, dependencies: Vec<T>) -> () {
         self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
             self.dependency_graph
@@ -60,7 +64,7 @@ impl MethodDependencyGraph {
         return ();
     }
 
-    pub fn methods_to_invalidate(&self, method: String) -> Vec<String> {
+    pub fn methods_to_invalidate(&self, method: T) -> Vec<T> {
         let mut queue = Vec::new();
         let mut visited = HashSet::new();
         let mut to_invalidate = Vec::new();
@@ -82,7 +86,7 @@ impl MethodDependencyGraph {
         return to_invalidate;
     }
 
-    pub fn temporarily_invalidate(&mut self, method: String) -> () {
+    pub fn temporarily_invalidate(&mut self, method: T) -> () {
         let to_invalidate = self.methods_to_invalidate(method);
 
         for invalid_methods in to_invalidate {
@@ -99,7 +103,7 @@ impl MethodDependencyGraph {
         return ();
     }
 
-    pub fn is_valid(&self, method: String) -> bool {
+    pub fn is_valid(&self, method: T) -> bool {
         let validity = self.validation_state
             .get(&method)
             .unwrap_or(&ValidationState::PermanentlyInvalid);
@@ -110,7 +114,7 @@ impl MethodDependencyGraph {
         };
     }
 
-    pub fn validate(&mut self, method: String) -> () {
+    pub fn validate(&mut self, method: T) -> () {
         let validity = self.validation_state
             .get(&method)
             .unwrap_or(&ValidationState::PermanentlyInvalid);
@@ -124,7 +128,7 @@ impl MethodDependencyGraph {
         return ();
     }
 
-    pub fn permanently_invalidate(&mut self, method: String) -> () {
+    pub fn permanently_invalidate(&mut self, method: T) -> () {
         self.validation_state
             .entry(method)
             .and_modify(|state| *state = ValidationState::PermanentlyInvalid)
@@ -132,12 +136,12 @@ impl MethodDependencyGraph {
         return ();
     }
 
-    pub fn clone_graph(&self) -> HashMap<String, HashSet<String>> {
+    pub fn clone_graph(&self) -> HashMap<T, HashSet<T>> {
         return self.dependency_graph
             .clone();
     }
 
-    pub fn clone_state(&self) -> HashMap<String, String> {
+    pub fn clone_state(&self) -> HashMap<T, String> {
         return self.validation_state
             .iter()
             .map(|(k, v)| match v {
