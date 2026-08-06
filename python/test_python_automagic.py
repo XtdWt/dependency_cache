@@ -1,12 +1,12 @@
 import pytest
-from dependency_cache import DependencyCacheBase, dependency_cached, plot_dependency_graph
+from dependency_cache import DependencyCacheBase, automagically_dependency_cached, plot_dependency_graph
 
 
 class IncorrectInheritance:
     def __init__(self):
         pass
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def A(self):
         return 1
 
@@ -15,7 +15,7 @@ class IncorrectMethod(DependencyCacheBase):
     def __init__(self):
         super().__init__()
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def A():
         return 1
 
@@ -26,15 +26,15 @@ class SimpleTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @automagically_dependency_cached()
     def C(self):
         return self.A() + self.B()
 
@@ -45,23 +45,23 @@ class HardTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @automagically_dependency_cached()
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=["C"])
+    @automagically_dependency_cached()
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=["C"])
+    @automagically_dependency_cached()
     def E(self):
         return self.C() * 3
 
@@ -72,27 +72,27 @@ class HarderTestObj(DependencyCacheBase):
         self.x = x
         self.y = y
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def A(self):
         return self.x
 
-    @dependency_cached()
+    @automagically_dependency_cached()
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @automagically_dependency_cached()
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=["C"])
+    @automagically_dependency_cached()
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=["C"])
+    @automagically_dependency_cached()
     def E(self):
         return self.C() * 3
 
-    @dependency_cached(dependencies=["D", "E"])
+    @automagically_dependency_cached()
     def F(self):
         return self.E() + self.D()
 
@@ -102,12 +102,12 @@ class UseCacheObj(DependencyCacheBase):
         super().__init__()
         self.x = x
 
-    @dependency_cached(use_cache=False)
+    @automagically_dependency_cached(use_cache=False)
     def A(self):
         print("calculating A!")
         return self.x
 
-    @dependency_cached(dependencies=["A"])
+    @automagically_dependency_cached()
     def B(self):
         return self.A() + 1
 

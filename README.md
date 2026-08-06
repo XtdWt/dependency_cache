@@ -37,6 +37,10 @@ uv run pytest -vv
 ```bash
 cargo test
 ```
+- temporary fix: generate stubs currently produces a file that is incorrectly formatted, use ruff to format the pyi file immediately
+```bash
+maturin develop --generate-stubs | uv run ruff format ./python/dependency_cache/dependency_cache.pyi
+```
 ### Quick Example
 
 ```python
