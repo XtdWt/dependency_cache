@@ -41,9 +41,11 @@ impl DependencyCacheDecorator {
     fn __call__(
         &self,
         py: Python<'_>,
-        args: &Bound<'_, PyTuple>,
-        kwargs: Option<&Bound<'_, PyDict>>,
+        args: Py<PyTuple>,
+        kwargs: Option<Py<PyDict>>,
     ) -> PyResult<Py<PyAny>> {
+        let args = args.bind(py);
+        let kwargs = kwargs.as_ref().map(|k| k.bind(py));
         if args.is_empty() {
             return Err(PyValueError::new_err(
                 "dependency_cached can only be used as an instance method decorator",
