@@ -1,14 +1,16 @@
 use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyTuple};
 // use pyo3::exceptions::PyValueError;
 
 // use std::collections::HashSet;
 use crate::decorator::DependencyCacheDecorator;
+use crate::normalise_method_args::normalise_and_hash_method;
 
 
 #[pyclass(name = "dependency_cached", frozen)]
 pub struct ManualDependencyCacheDecoratorFactory {
     use_cache: bool,
-    dependencies: Vec<String>,
+    dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
 }
 
@@ -16,7 +18,7 @@ pub struct ManualDependencyCacheDecoratorFactory {
 impl ManualDependencyCacheDecoratorFactory {
     #[new]
     #[pyo3(signature = (use_cache=true, dependencies=vec![], track_runtime_dependencies=false))]
-    fn new(use_cache: bool, dependencies: Vec<String>, track_runtime_dependencies: bool) -> Self {
+    fn new(use_cache: bool, dependencies: Vec<(String, Py<PyDict>)>, track_runtime_dependencies: bool) -> Self {
         return Self {
             use_cache,
             dependencies,
@@ -26,11 +28,26 @@ impl ManualDependencyCacheDecoratorFactory {
 
     fn __call__(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<DependencyCacheDecorator> {
         let method_name: String = func.getattr(py, "__name__")?.extract(py)?;
+        let empty_args = PyTuple::empty(py);
+        let hashed_dependencies: Vec<isize> = self
+            .dependencies
+            .iter()
+            .map(|(method_name, kwargs)| {
+                let (hash, _) = normalise_and_hash_method(
+                    py,
+                    method_name,
+                    None,
+                    &empty_args,
+                    Some(&kwargs.bind(py)),
+                )?;
+                Ok(hash)
+            })
+            .collect::<PyResult<Vec<_>>>()?;
         return Ok(
             DependencyCacheDecorator {
                 func,
                 use_cache: self.use_cache,
-                dependencies: self.dependencies.clone(),
+                dependencies: hashed_dependencies,
                 method_name,
                 track_runtime_dependencies: self.track_runtime_dependencies,
             }
@@ -42,7 +59,7 @@ impl ManualDependencyCacheDecoratorFactory {
 #[pyclass(name = "automagically_dependency_cached", frozen)]
 pub struct AutomagicDependencyCacheDecoratorFactory {
     use_cache: bool,
-    dependencies: Vec<String>,
+    dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
 }
 
@@ -50,7 +67,7 @@ pub struct AutomagicDependencyCacheDecoratorFactory {
 impl AutomagicDependencyCacheDecoratorFactory {
     #[new]
     #[pyo3(signature = (use_cache=true, dependencies=vec![], track_runtime_dependencies=true))]
-    fn new(use_cache: bool, dependencies: Vec<String>, track_runtime_dependencies: bool) -> Self {
+    fn new(use_cache: bool, dependencies: Vec<(String, Py<PyDict>)>, track_runtime_dependencies: bool) -> Self {
         return Self {
             use_cache,
             dependencies,
@@ -65,11 +82,26 @@ impl AutomagicDependencyCacheDecoratorFactory {
         // } else {
         //     self.dependencies.clone()
         // };
+        let empty_args = PyTuple::empty(py);
+        let hashed_dependencies: Vec<isize> = self
+            .dependencies
+            .iter()
+            .map(|(method_name, kwargs)| {
+                let (hash, _) = normalise_and_hash_method(
+                    py,
+                    method_name,
+                    None,
+                    &empty_args,
+                    Some(&kwargs.bind(py)),
+                )?;
+                Ok(hash)
+            })
+            .collect::<PyResult<Vec<_>>>()?;
         return Ok(
             DependencyCacheDecorator {
                 func,
                 use_cache: self.use_cache,
-                dependencies: self.dependencies.clone(),
+                dependencies: hashed_dependencies,
                 method_name,
                 track_runtime_dependencies: self.track_runtime_dependencies,
             }

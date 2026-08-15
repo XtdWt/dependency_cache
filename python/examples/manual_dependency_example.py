@@ -24,17 +24,17 @@ class ExampleCalculationManual(DependencyCacheBase):
         print("calculating B")
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @dependency_cached(dependencies=[("A", {}), ("B", {})])
     def C(self):
         print("calculating C")
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def D(self):
         print("calculating D")
         return self.C() / 2
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def E(self):
         print("calculating E")
         return self.C() * 2

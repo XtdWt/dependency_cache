@@ -2,6 +2,7 @@ mod decorator;
 mod dependency_graph;
 mod dependency_cache_base;
 mod decorator_factory;
+mod normalise_method_args;
 
 use pyo3::prelude::*;
 

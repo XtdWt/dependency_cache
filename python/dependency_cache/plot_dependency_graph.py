@@ -10,7 +10,13 @@ def plot_dependency_graph(obj, **kwargs) -> None:
     graph_data = obj.get_dependency_graph()
     g = nx.DiGraph()
     for child_node, parents in graph_data.items():
+        if isinstance(child_node, tuple):
+            func_name, args = child_node
+            child_node = f"{func_name}({''.join([f'{var}={val}' for (var, val) in args])})"
         for parent_node in parents:
+            if isinstance(parent_node, tuple):
+                func_name, args = parent_node
+                parent_node = f"{func_name}({''.join([f'{var}={val}' for (var, val) in args])})"
             g.add_edge(parent_node, child_node)
 
     for layer_idx, nodes in enumerate(nx.topological_generations(g)):
@@ -22,12 +28,12 @@ def plot_dependency_graph(obj, **kwargs) -> None:
 
     defaults = {
         "with_labels": True,
-        "node_size": 1200,
+        "node_size": 3600,
         "node_color": "#4361ee",
         "font_color": "white",
         "font_weight": "bold",
         "edge_color": "gray",
-        "width": 2,
+        "width": 1,
         "arrows": True,
     }
 

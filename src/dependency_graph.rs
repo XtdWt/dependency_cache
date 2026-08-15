@@ -8,22 +8,23 @@ pub enum ValidationState {
     Invalid,
     PermanentlyInvalid,
 }
-pub struct MethodDependencyGraph<T> {
+pub struct MethodDependencyGraph<T, M = ()> {
     validation_state: HashMap<T, ValidationState>,
     dependency_graph: HashMap<T, HashSet<T>>,  // maps child_name to set[parents_name], for ease of traversal
+    metadata_map: HashMap<T, M>,
 }
 
-// pub struct MethodDependencyGraph<T> {
-//     validation_state: HashMap<String, ValidationState>,
-//     dependency_graph: HashMap<String, HashSet<String>>, // maps child_name to set[parents_name], for ease of traversal
-// }
-
-impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
+impl<T: Eq + Hash + Clone, M> MethodDependencyGraph<T, M> {
     pub fn new() -> Self {
         return MethodDependencyGraph {
             validation_state: HashMap::new(),
             dependency_graph: HashMap::new(),
+            metadata_map: HashMap::new(),
         };
+    }
+
+    pub fn get_metadata(&self, method: &T) -> Option<&M> {
+        self.metadata_map.get(method)
     }
 
     pub fn get_method_state_as_enum(&self, method: &T) -> &ValidationState {
@@ -38,11 +39,12 @@ impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
             .collect()
     }
 
-    pub fn add_children_dependency(&mut self, method: T, dependencies: Vec<T>) -> () {
+    pub fn add_children_dependency(&mut self, method: T, dependencies: Vec<T>, metadata: M) -> () {
         if self.validation_state.contains_key(&method) {
             return ();
         }
         self.validation_state.insert(method.clone(), ValidationState::Invalid);
+        self.metadata_map.insert(method.clone(), metadata);
         self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
             self.dependency_graph
@@ -151,6 +153,11 @@ impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
             })
             .collect();
     }
+
+    pub fn clone_metadata(&self) -> HashMap<T, M>
+    where M: Clone {
+        return self.metadata_map.clone();
+    }
 }
 
 #[cfg(test)]
@@ -160,9 +167,9 @@ mod tests {
     #[test]
     fn test_cache_state_add_one() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec![], ());
+        dg.add_children_dependency("C".to_string(), vec![], ());
 
         let mut cache_state = HashMap::new();
         cache_state.insert("A".to_string(), ValidationState::Invalid);
@@ -174,13 +181,13 @@ mod tests {
     #[test]
     fn test_cache_state_add_many() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec!["D".to_string(), "E".to_string()]);
-        dg.add_children_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()]);
-        dg.add_children_dependency("D".to_string(), vec![]);
-        dg.add_children_dependency("E".to_string(), vec![]);
-        dg.add_children_dependency("F".to_string(), vec![]);
-        dg.add_children_dependency("G".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec!["D".to_string(), "E".to_string()], ());
+        dg.add_children_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()], ());
+        dg.add_children_dependency("D".to_string(), vec![], ());
+        dg.add_children_dependency("E".to_string(), vec![], ());
+        dg.add_children_dependency("F".to_string(), vec![], ());
+        dg.add_children_dependency("G".to_string(), vec![], ());
 
         let mut cache_state = HashMap::new();
         cache_state.insert("A".to_string(), ValidationState::Invalid);
@@ -196,7 +203,7 @@ mod tests {
     #[test]
     fn test_graph_state_add_one() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
 
         let mut graph_state = HashMap::new();
         graph_state.insert("A".to_string(), HashSet::new());
@@ -208,9 +215,9 @@ mod tests {
     #[test]
     fn test_graph_state_add_many() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec!["D".to_string(), "E".to_string()]);
-        dg.add_children_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec!["D".to_string(), "E".to_string()], ());
+        dg.add_children_dependency("C".to_string(), vec!["F".to_string(), "G".to_string()], ());
 
         let mut graph_state = HashMap::new();
         graph_state.insert("A".to_string(), HashSet::new());
@@ -226,9 +233,9 @@ mod tests {
     #[test]
     fn test_name_validation() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec![], ());
+        dg.add_children_dependency("C".to_string(), vec![], ());
 
         assert!(!dg.is_valid("A".to_string()));
         assert!(!dg.is_valid("B".to_string()));
@@ -250,7 +257,7 @@ mod tests {
     #[test]
     fn test_name_invalidation() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
         dg.validate("A".to_string());
         dg.validate("B".to_string());
         dg.validate("C".to_string());
@@ -267,10 +274,10 @@ mod tests {
     #[test]
     fn test_add_dependency_idempotency() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
 
         let mut graph_state = HashMap::new();
         graph_state.insert("A".to_string(), HashSet::new());
@@ -282,9 +289,9 @@ mod tests {
     #[test]
     fn test_attempt_to_validate_permanently_invalid_state() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec![], ());
+        dg.add_children_dependency("C".to_string(), vec![], ());
 
         dg.permanently_invalidate("B".to_string());
 
@@ -300,9 +307,9 @@ mod tests {
     #[test]
     fn test_attempt_to_invalidate_permanently_invalid_state() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], ());
+        dg.add_children_dependency("B".to_string(), vec![], ());
+        dg.add_children_dependency("C".to_string(), vec![], ());
 
         dg.permanently_invalidate("B".to_string());
 
@@ -318,9 +325,9 @@ mod tests {
     #[test]
     fn test_clones_default() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], "A".to_string());
+        dg.add_children_dependency("B".to_string(), vec![], "B".to_string());
+        dg.add_children_dependency("C".to_string(), vec![], "C".to_string());
 
         let mut cache_state = HashMap::new();
         cache_state.insert("A".to_string(), "invalid".to_string());
@@ -335,14 +342,21 @@ mod tests {
         graph_state.insert("C".to_string(), HashSet::from(["A".to_string()]));
 
         assert_eq!(dg.clone_graph(), graph_state);
+
+        let mut metadata_store = HashMap::new();
+        metadata_store.insert("A".to_string(), "A".to_string());
+        metadata_store.insert("B".to_string(), "B".to_string());
+        metadata_store.insert("C".to_string(), "C".to_string());
+
+        assert_eq!(dg.clone_metadata(), metadata_store);
     }
 
     #[test]
     fn test_clones_after_mutation() {
         let mut dg = MethodDependencyGraph::new();
-        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()]);
-        dg.add_children_dependency("B".to_string(), vec![]);
-        dg.add_children_dependency("C".to_string(), vec![]);
+        dg.add_children_dependency("A".to_string(), vec!["B".to_string(), "C".to_string()], "A".to_string());
+        dg.add_children_dependency("B".to_string(), vec![], "B".to_string());
+        dg.add_children_dependency("C".to_string(), vec![], "C".to_string());
         dg.validate("A".to_string());
         dg.permanently_invalidate("B".to_string());
 
@@ -353,6 +367,7 @@ mod tests {
 
         assert_eq!(dg.clone_state(), cache_state);
 
+        dg.add_children_dependency("D".to_string(), vec![], "D".to_string());
         dg.add_parent_dependency("B".to_string(), vec!["D".to_string()]);
 
         let mut graph_state = HashMap::new();
