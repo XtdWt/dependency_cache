@@ -179,10 +179,26 @@ impl DependencyCacheBase {
 
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (name, value) in &self.cache {
-            dict.set_item(name, value.clone_ref(py))?;
+        for (hash, value) in &self.cache {
+            let Some(meta) = self.method_dependency_graph.get_metadata(hash) else {
+                continue;
+            };
+            let bound = meta.bind(py);
+
+            let func_name: String = bound.get_item(0)?.extract()?;
+
+            let args_item = bound.get_item(1)?;
+            let normalized_args = args_item.cast::<PyTuple>()?;
+
+            let key = if normalized_args.len() == 0 {
+                PyString::new(py, &func_name).into_any()
+            } else {
+                bound.clone().into_any()
+            };
+
+            dict.set_item(key, value.clone_ref(py))?;
         }
-        return Ok(dict);
+        Ok(dict)
     }
 
     pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
