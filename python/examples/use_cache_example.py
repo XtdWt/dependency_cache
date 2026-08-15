@@ -12,7 +12,7 @@ class UseCacheExample(DependencyCacheBase):
         print("calculating A")
         return time.time()
 
-    @dependency_cached(dependencies=["A"])
+    @dependency_cached(dependencies=[("A", {})])
     def B(self):
         print("calculating B")
         return self.A() + 1

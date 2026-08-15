@@ -34,7 +34,7 @@ class SimpleTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @dependency_cached(dependencies=[("A", {}), ("B", {})])
     def C(self):
         return self.A() + self.B()
 
@@ -53,15 +53,15 @@ class HardTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @dependency_cached(dependencies=[("A", {}), ("B", {})])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def E(self):
         return self.C() * 3
 
@@ -80,19 +80,19 @@ class HarderTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=["A", "B"])
+    @dependency_cached(dependencies=[("A", {}), ("B", {})])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=["C"])
+    @dependency_cached(dependencies=[("C", {})])
     def E(self):
         return self.C() * 3
 
-    @dependency_cached(dependencies=["D", "E"])
+    @dependency_cached(dependencies=[("D", {}), ("E", {})])
     def F(self):
         return self.E() + self.D()
 
@@ -107,7 +107,7 @@ class UseCacheObj(DependencyCacheBase):
         print("calculating A!")
         return self.x
 
-    @dependency_cached(dependencies=["A"])
+    @dependency_cached(dependencies=[("A", {})])
     def B(self):
         return self.A() + 1
 
