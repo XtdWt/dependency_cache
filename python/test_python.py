@@ -112,6 +112,24 @@ class UseCacheObj(DependencyCacheBase):
         return self.A() + 1
 
 
+class FunctionCallObj(DependencyCacheBase):
+    def __init__(self, x):
+        super().__init__()
+        self.x = x
+
+    @dependency_cached()
+    def A(self, x):
+        print("calculating A!")
+        return x + self.x
+
+    @dependency_cached(dependencies=[("A", {"x": 0}), ("A", {"x": 1})])
+    def B(self):
+        total = 0
+        for i in range(2):
+            total += self.A(i)
+        return total
+
+
 def test_raises_typeerror():
     c = IncorrectInheritance()
     with pytest.raises(TypeError):
@@ -261,3 +279,16 @@ def test_plot_dependency_graph_raises():
 
     with pytest.raises(TypeError):
         plot_dependency_graph(c)
+
+
+def test_function_calls():
+    c = FunctionCallObj(3)
+
+    assert c.get_dependency_graph() == {}
+    assert c.get_validation_state() == {}
+
+    result = c.B()
+    assert result == 7
+
+    assert c.get_dependency_graph() == {"B": set(), ("A", (("x", 0),)): {"B"}, ("A", (("x", 1),)): {"B"}}
+    assert c.get_validation_state() == {"B": "valid", ("A", (("x", 0),)): "valid", ("A", (("x", 1),)): "valid"}
