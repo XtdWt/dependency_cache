@@ -93,7 +93,8 @@ This project is still a work in progress, with everything from API to underlying
 
 Current TODO list (in no particular order):
 - load and dump cache methods for base class
-- decide what to do with methods that take arguments for caching
+- clean up ergonomics for decorator argument dependencies
+- add back in ast parsing
 - move plot_dependency_graph to rust side instead of python
-- refactor automagic parser code
 - add object thread safety for python 3.14+
+- work out how best to handle nested objects
