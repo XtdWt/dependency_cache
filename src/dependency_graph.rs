@@ -24,7 +24,7 @@ impl<T: Eq + Hash + Clone, M> MethodDependencyGraph<T, M> {
     }
 
     pub fn get_metadata(&self, method: &T) -> Option<&M> {
-        self.metadata_map.get(method)
+        return self.metadata_map.get(method);
     }
 
     pub fn get_method_state_as_enum(&self, method: &T) -> &ValidationState {
@@ -32,11 +32,11 @@ impl<T: Eq + Hash + Clone, M> MethodDependencyGraph<T, M> {
     }
 
     pub fn list_child_methods(&self, method: &T) -> Vec<T> {
-        self.dependency_graph
+        return self.dependency_graph
             .iter()
             .filter(|(_, parents)| parents.contains(method))
             .map(|(child, _)| child.clone())
-            .collect()
+            .collect();
     }
 
     pub fn add_children_dependency(&mut self, method: T, dependencies: Vec<T>, metadata: M) -> () {

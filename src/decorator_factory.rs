@@ -21,7 +21,6 @@ fn parse_dependencies(py: Python<'_>, dep_list: &Bound<'_, PyAny>) -> PyResult<V
             }
         }
 
-        // Try as plain string
         if let Ok(method_name) = item.extract::<String>() {
             let empty_dict = PyDict::new(py);
             parsed.push((method_name, empty_dict.unbind()));
@@ -33,7 +32,7 @@ fn parse_dependencies(py: Python<'_>, dep_list: &Bound<'_, PyAny>) -> PyResult<V
         ));
     }
 
-    Ok(parsed)
+    return Ok(parsed);
 }
 
 #[pyclass(name = "dependency_cached", frozen)]
@@ -58,11 +57,11 @@ impl ManualDependencyCacheDecoratorFactory {
         } else {
             Vec::new()
         };
-        Ok(Self {
+        return Ok(Self {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
-        })
+        });
     }
 
     fn __call__(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<DependencyCacheDecorator> {
@@ -82,13 +81,13 @@ impl ManualDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
-        Ok(DependencyCacheDecorator {
+        return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
-        })
+        });
     }
 }
 
@@ -114,11 +113,11 @@ impl AutomagicDependencyCacheDecoratorFactory {
         } else {
             Vec::new()
         };
-        Ok(Self {
+        return Ok(Self {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
-        })
+        });
     }
 
     fn __call__(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<DependencyCacheDecorator> {
@@ -138,12 +137,12 @@ impl AutomagicDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
-        Ok(DependencyCacheDecorator {
+        return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
-        })
+        });
     }
 }
