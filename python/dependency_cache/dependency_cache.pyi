@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from typing import Any, final
 
 class DependencyCacheBase:
@@ -20,7 +19,7 @@ class automagically_dependency_cached:
         cls,
         /,
         use_cache: bool = True,
-        dependencies: Sequence[tuple[str, dict]] = ...,
+        dependencies: Any | None = None,
         track_runtime_dependencies: bool = True,
     ) -> automagically_dependency_cached: ...
 
@@ -31,6 +30,6 @@ class dependency_cached:
         cls,
         /,
         use_cache: bool = True,
-        dependencies: Sequence[tuple[str, dict]] = ...,
+        dependencies: Any | None = None,
         track_runtime_dependencies: bool = False,
     ) -> dependency_cached: ...

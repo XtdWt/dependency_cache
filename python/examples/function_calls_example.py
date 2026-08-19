@@ -1,4 +1,4 @@
-from dependency_cache import DependencyCacheBase, dependency_cached, plot_dependency_graph
+from dependency_cache import DependencyCacheBase, dependency_cached
 
 
 class FunctionCallObj(DependencyCacheBase):
