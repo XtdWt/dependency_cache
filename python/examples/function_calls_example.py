@@ -6,7 +6,7 @@ class FunctionCallObj(DependencyCacheBase):
         super().__init__()
         self.x = x
 
-    @dependency_cached(dependencies=[("C", {})])
+    @dependency_cached(dependencies=["C"])
     def A(self, x):
         print("calculating A!")
         return x + self.x + self.C()
