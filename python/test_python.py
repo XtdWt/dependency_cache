@@ -34,7 +34,7 @@ class SimpleTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=[("A", {}), ("B", {})])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
@@ -53,15 +53,15 @@ class HardTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=[("A", {}), ("B", {})])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=[("C", {})])
+    @dependency_cached(dependencies=["C"])
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=[("C", {})])
+    @dependency_cached(dependencies=["C"])
     def E(self):
         return self.C() * 3
 
@@ -80,19 +80,19 @@ class HarderTestObj(DependencyCacheBase):
     def B(self):
         return self.y
 
-    @dependency_cached(dependencies=[("A", {}), ("B", {})])
+    @dependency_cached(dependencies=["A", "B"])
     def C(self):
         return self.A() + self.B()
 
-    @dependency_cached(dependencies=[("C", {})])
+    @dependency_cached(dependencies=["C"])
     def D(self):
         return self.C() * 2
 
-    @dependency_cached(dependencies=[("C", {})])
+    @dependency_cached(dependencies=["C"])
     def E(self):
         return self.C() * 3
 
-    @dependency_cached(dependencies=[("D", {}), ("E", {})])
+    @dependency_cached(dependencies=["D", "E"])
     def F(self):
         return self.E() + self.D()
 
@@ -107,7 +107,7 @@ class UseCacheObj(DependencyCacheBase):
         print("calculating A!")
         return self.x
 
-    @dependency_cached(dependencies=[("A", {})])
+    @dependency_cached(dependencies=["A"])
     def B(self):
         return self.A() + 1
 
@@ -292,3 +292,19 @@ def test_function_calls():
 
     assert c.get_dependency_graph() == {"B": set(), ("A", (("x", 0),)): {"B"}, ("A", (("x", 1),)): {"B"}}
     assert c.get_validation_state() == {"B": "valid", ("A", (("x", 0),)): "valid", ("A", (("x", 1),)): "valid"}
+
+
+def test_incorrect_decorator_format():
+    with pytest.raises(ValueError):
+
+        class IncorrectDependencyType(DependencyCacheBase):
+            def __init__(self):
+                pass
+
+            @dependency_cached(dependencies=[3, ("B", [1])])
+            def A(self):
+                return 1
+
+            @dependency_cached()
+            def B(self):
+                return 2

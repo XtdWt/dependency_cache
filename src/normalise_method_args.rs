@@ -58,5 +58,5 @@ pub fn normalise_and_hash_method<'py>(
     )?;
     let hash_val = combined.hash()?;
 
-    Ok((hash_val, combined))
+    return Ok((hash_val, combined));
 }
