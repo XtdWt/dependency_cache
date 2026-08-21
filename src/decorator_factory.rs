@@ -6,6 +6,23 @@ use crate::decorator::DependencyCacheDecorator;
 use crate::normalise_method_args::normalise_and_hash_method;
 
 
+pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<()> {
+    let inspect = py.import("inspect")?;
+    let signature = inspect.call_method1("signature", (func,))?;
+    let parameters = signature.getattr("parameters")?;
+    let param_names: Vec<String> = parameters.call_method0("keys")?.extract()?;
+
+    if param_names.len() != 1 || param_names[0] != "self" {
+        let msg = format!(
+            "Serialisable method must have exactly one parameter named 'self', got: {:?}",
+            param_names
+        );
+        return Err(PyValueError::new_err(msg));
+    }
+    Ok(())
+}
+
+
 fn parse_dependencies(py: Python<'_>, dep_list: &Bound<'_, PyAny>) -> PyResult<Vec<(String, Py<PyDict>)>> {
     let list = dep_list.cast::<PyList>()?;
     let mut parsed = Vec::with_capacity(list.len());
@@ -85,6 +102,7 @@ impl ManualDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
+        validate_self_only_method(py, func.bind(py))?;
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
@@ -145,6 +163,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
+        validate_self_only_method(py, func.bind(py))?;
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
