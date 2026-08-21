@@ -40,17 +40,20 @@ pub struct ManualDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
+    serialisable: bool,
 }
 
 #[pymethods]
 impl ManualDependencyCacheDecoratorFactory {
+
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=false))]
+    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=false, serialisable=false))]
     fn new(
         py: Python<'_>,
         use_cache: bool,
         dependencies: Option<&Bound<'_, PyAny>>,
         track_runtime_dependencies: bool,
+        serialisable: bool,
     ) -> PyResult<Self> {
         let parsed_deps = if let Some(list) = dependencies {
             parse_dependencies(py, list)?
@@ -61,6 +64,7 @@ impl ManualDependencyCacheDecoratorFactory {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
+            serialisable,
         });
     }
 
@@ -87,6 +91,7 @@ impl ManualDependencyCacheDecoratorFactory {
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
+            serialisable: self.serialisable,
         });
     }
 }
@@ -96,17 +101,19 @@ pub struct AutomagicDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
+    serialisable: bool,
 }
 
 #[pymethods]
 impl AutomagicDependencyCacheDecoratorFactory {
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=true))]
+    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=true, serialisable=false))]
     fn new(
         py: Python<'_>,
         use_cache: bool,
         dependencies: Option<&Bound<'_, PyAny>>,
         track_runtime_dependencies: bool,
+        serialisable: bool,
     ) -> PyResult<Self> {
         let parsed_deps = if let Some(list) = dependencies {
             parse_dependencies(py, list)?
@@ -117,6 +124,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
+            serialisable,
         });
     }
 
@@ -143,6 +151,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
+            serialisable: self.serialisable,
         });
     }
 }

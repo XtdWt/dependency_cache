@@ -12,6 +12,7 @@ pub struct DependencyCacheDecorator {
     pub dependencies: Vec<isize>,
     pub method_name: String,
     pub track_runtime_dependencies: bool,
+    pub serialisable: bool,
 }
 
 #[pymethods]
