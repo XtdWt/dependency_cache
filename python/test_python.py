@@ -328,7 +328,15 @@ def test_incorrect_decorator_format():
                 return 2
 
 
-@pytest.mark.parametrize(("data", "result"), [({"A": 1, "B": 2}, 3)])
+@pytest.mark.parametrize(
+    ("data", "result"),
+    [
+        ({"A": 1, "B": 2}, 3),
+        ({"A": 1.45, "B": 2.55}, 4.0),
+        ({"A": "1", "B": "2"}, "12"),
+        ({"A": [1], "B": [2]}, [1, 2]),
+    ],
+)
 def test_serialising_data(data, result):
     obj = SerialisableObj()
 
