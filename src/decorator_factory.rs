@@ -10,7 +10,10 @@ pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyR
     let inspect = py.import("inspect")?;
     let signature = inspect.call_method1("signature", (func,))?;
     let parameters = signature.getattr("parameters")?;
-    let param_names: Vec<String> = parameters.call_method0("keys")?.extract()?;
+    let keys = parameters.call_method0("keys")?;
+    let builtins = py.import("builtins")?;
+    let list_obj = builtins.call_method1("list", (keys,))?;
+    let param_names: Vec<String> = list_obj.extract()?;
 
     if param_names.len() != 1 || param_names[0] != "self" {
         let msg = format!(
@@ -102,7 +105,9 @@ impl ManualDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
-        validate_self_only_method(py, func.bind(py))?;
+        if self.serialisable {
+            validate_self_only_method(py, func.bind(py))?;
+        }
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
@@ -163,7 +168,9 @@ impl AutomagicDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
-        validate_self_only_method(py, func.bind(py))?;
+        if self.serialisable {
+            validate_self_only_method(py, func.bind(py))?;
+        }
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,

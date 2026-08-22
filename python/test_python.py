@@ -11,15 +11,6 @@ class IncorrectInheritance:
         return 1
 
 
-class IncorrectMethod(DependencyCacheBase):
-    def __init__(self):
-        super().__init__()
-
-    @dependency_cached()
-    def A():
-        return 1
-
-
 class SimpleTestObj(DependencyCacheBase):
     def __init__(self, x, y):
         super().__init__()
@@ -130,14 +121,41 @@ class FunctionCallObj(DependencyCacheBase):
         return total
 
 
+class SerialisableObj(DependencyCacheBase):
+    @dependency_cached(serialisable=True)
+    def A(self):
+        return None
+
+    @dependency_cached(serialisable=True)
+    def B(self):
+        return None
+
+    @dependency_cached(dependencies=["A", "B"])
+    def C(self):
+        a = self.A()
+        b = self.B()
+        if a and b:
+            return a + b
+        return None
+
+
 def test_raises_typeerror():
-    c = IncorrectInheritance()
     with pytest.raises(TypeError):
+        c = IncorrectInheritance()
         c.A()
 
 
 def test_incorrect_method_raises_valueerror():
     with pytest.raises(TypeError):
+
+        class IncorrectMethod(DependencyCacheBase):
+            def __init__(self):
+                super().__init__()
+
+            @dependency_cached()
+            def A():
+                return 1
+
         c = IncorrectMethod()
         c.A()
 
@@ -308,3 +326,14 @@ def test_incorrect_decorator_format():
             @dependency_cached()
             def B(self):
                 return 2
+
+
+@pytest.mark.parametrize(("data", "result"), [({"A": 1, "B": 2}, 3)])
+def test_serialising_data(data, result):
+    obj = SerialisableObj()
+
+    obj.load_cache(data)
+
+    assert obj.C() is not None
+
+    assert obj.C() == result
