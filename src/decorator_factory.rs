@@ -8,11 +8,11 @@ use crate::normalise_method_args::normalise_and_hash_method;
 
 pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<()> {
     let inspect = py.import("inspect")?;
-    let signature = inspect.call_method1("signature", (func,))?;
-    let parameters = signature.getattr("parameters")?;
-    let keys = parameters.call_method0("keys")?;
     let builtins = py.import("builtins")?;
-    let list_obj = builtins.call_method1("list", (keys,))?;
+    let signature = inspect.call_method1("signature", (func,))?;
+    // really ugly, but the inspect.Signature type is not extractable
+    let parameters = signature.getattr("parameters")?;
+    let list_obj = builtins.call_method1("list", (parameters,))?;
     let param_names: Vec<String> = list_obj.extract()?;
 
     if param_names.len() != 1 || param_names[0] != "self" {
