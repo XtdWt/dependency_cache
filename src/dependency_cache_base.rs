@@ -1,5 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
+use pyo3::exceptions::PyValueError;
 
 use std::collections::{HashMap, HashSet};
 
@@ -301,7 +302,23 @@ impl DependencyCacheBase {
         Ok(result)
     }
 
-    pub fn load_cache<'py>(&self, py: Python<'py>, data: Bound<'py, PyDict>) -> PyResult<Bound<'py, PyDict>> {
-        todo!()
+    pub fn load_cache<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+        data: Bound<'py, PyDict>,
+    ) -> PyResult<()> {
+        for (key, loaded_value) in data.iter() {
+            let method_name: String = key.extract()?;
+
+            let _ = slf.call_method(&method_name, (), None)?;
+
+            let empty_args = PyTuple::empty(py);
+            let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, None)
+                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
+
+            slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
+        }
+
+        Ok(())
     }
 }
