@@ -1,11 +1,12 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple, PyString, PySet};
+use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
+use pyo3::exceptions::PyValueError;
 
-use std::collections::{HashMap};
+use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
 use crate::normalise_method_args::normalise_and_hash_method;
-
+use crate::decorator::DependencyCacheDecorator;
 
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
@@ -268,5 +269,56 @@ impl DependencyCacheBase {
             dict.set_item(key, state)?;
         }
         Ok(dict)
+    }
+
+    pub fn dump_cache<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let cls = slf.get_type();
+
+        let mut visited = HashSet::new();
+        let mut serialisable_methods = Vec::new();
+
+        for mro_class in cls.mro().iter() {
+            let mro_class: Bound<'_, PyType> = mro_class.extract()?;
+            let namespace = mro_class.getattr("__dict__")?;
+            for item in namespace.call_method0("items")?.try_iter()? {
+                let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
+                if name.starts_with("__") || !visited.insert(name.clone()) {
+                    continue;
+                }
+                if let Ok(decorator) = value.cast::<DependencyCacheDecorator>() {
+                    if decorator.borrow().serialisable {
+                        serialisable_methods.push(name);
+                    }
+                }
+            }
+        }
+
+        let result = PyDict::new(py);
+        for method_name in serialisable_methods {
+            let value = slf.call_method(&method_name, (), None)?;
+            result.set_item(method_name, value)?;
+        }
+
+        Ok(result)
+    }
+
+    pub fn load_cache<'py>(
+        slf: &Bound<'_, Self>,
+        py: Python<'py>,
+        data: Bound<'py, PyDict>,
+    ) -> PyResult<()> {
+        for (key, loaded_value) in data.iter() {
+            let method_name: String = key.extract()?;
+
+            let _ = slf.call_method(&method_name, (), None)?;
+
+            let empty_args = PyTuple::empty(py);
+            let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, None)
+                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
+
+            slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
+        }
+
+        Ok(())
     }
 }

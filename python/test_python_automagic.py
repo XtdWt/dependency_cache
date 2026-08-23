@@ -11,15 +11,6 @@ class IncorrectInheritance:
         return 1
 
 
-class IncorrectMethod(DependencyCacheBase):
-    def __init__(self):
-        super().__init__()
-
-    @automagically_dependency_cached()
-    def A():
-        return 1
-
-
 class SimpleTestObj(DependencyCacheBase):
     def __init__(self, x, y):
         super().__init__()
@@ -138,6 +129,15 @@ def test_raises_typeerror():
 
 def test_incorrect_method_raises_valueerror():
     with pytest.raises(TypeError):
+
+        class IncorrectMethod(DependencyCacheBase):
+            def __init__(self):
+                super().__init__()
+
+            @automagically_dependency_cached()
+            def A():
+                return 1
+
         c = IncorrectMethod()
         c.A()
 

@@ -6,6 +6,26 @@ use crate::decorator::DependencyCacheDecorator;
 use crate::normalise_method_args::normalise_and_hash_method;
 
 
+pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<()> {
+    let inspect = py.import("inspect")?;
+    let builtins = py.import("builtins")?;
+    let signature = inspect.call_method1("signature", (func,))?;
+    // really ugly, but the inspect.Signature type is not extractable
+    let parameters = signature.getattr("parameters")?;
+    let list_obj = builtins.call_method1("list", (parameters,))?;
+    let param_names: Vec<String> = list_obj.extract()?;
+
+    if param_names.len() != 1 || param_names[0] != "self" {
+        let msg = format!(
+            "Serialisable method must have exactly one parameter named 'self', got: {:?}",
+            param_names
+        );
+        return Err(PyValueError::new_err(msg));
+    }
+    Ok(())
+}
+
+
 fn parse_dependencies(py: Python<'_>, dep_list: &Bound<'_, PyAny>) -> PyResult<Vec<(String, Py<PyDict>)>> {
     let list = dep_list.cast::<PyList>()?;
     let mut parsed = Vec::with_capacity(list.len());
@@ -40,17 +60,20 @@ pub struct ManualDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
+    serialisable: bool,
 }
 
 #[pymethods]
 impl ManualDependencyCacheDecoratorFactory {
+
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=false))]
+    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=false, serialisable=false))]
     fn new(
         py: Python<'_>,
         use_cache: bool,
         dependencies: Option<&Bound<'_, PyAny>>,
         track_runtime_dependencies: bool,
+        serialisable: bool,
     ) -> PyResult<Self> {
         let parsed_deps = if let Some(list) = dependencies {
             parse_dependencies(py, list)?
@@ -61,6 +84,7 @@ impl ManualDependencyCacheDecoratorFactory {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
+            serialisable,
         });
     }
 
@@ -81,12 +105,16 @@ impl ManualDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
+        if self.serialisable {
+            validate_self_only_method(py, func.bind(py))?;
+        }
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
+            serialisable: self.serialisable,
         });
     }
 }
@@ -96,17 +124,19 @@ pub struct AutomagicDependencyCacheDecoratorFactory {
     use_cache: bool,
     dependencies: Vec<(String, Py<PyDict>)>,
     track_runtime_dependencies: bool,
+    serialisable: bool,
 }
 
 #[pymethods]
 impl AutomagicDependencyCacheDecoratorFactory {
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=true))]
+    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=true, serialisable=false))]
     fn new(
         py: Python<'_>,
         use_cache: bool,
         dependencies: Option<&Bound<'_, PyAny>>,
         track_runtime_dependencies: bool,
+        serialisable: bool,
     ) -> PyResult<Self> {
         let parsed_deps = if let Some(list) = dependencies {
             parse_dependencies(py, list)?
@@ -117,6 +147,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
             use_cache,
             dependencies: parsed_deps,
             track_runtime_dependencies,
+            serialisable,
         });
     }
 
@@ -137,12 +168,16 @@ impl AutomagicDependencyCacheDecoratorFactory {
                 Ok(hash)
             })
             .collect::<PyResult<Vec<_>>>()?;
+        if self.serialisable {
+            validate_self_only_method(py, func.bind(py))?;
+        }
         return Ok(DependencyCacheDecorator {
             func,
             use_cache: self.use_cache,
             dependencies: hashed_dependencies,
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
+            serialisable: self.serialisable,
         });
     }
 }

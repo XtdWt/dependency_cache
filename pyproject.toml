@@ -11,8 +11,8 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 keywords = ["caching", "dependency-graph", "invalidation"]
-version = "0.1.0"
-description = "A caching system with a dependency graph for invalidation"
+version = "0.1.1"
+description = "A caching system for object methods that utilises a dependency graph to track relationships and trigger invalidation"
 readme = "README.md"
 license = { text = "MIT" }
 dependencies = [
