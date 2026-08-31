@@ -2,11 +2,15 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
 use pyo3::exceptions::PyValueError;
 
+use rand::rng;
+use rand::seq::SliceRandom;
+
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
 use crate::normalise_method_args::normalise_and_hash_method;
 use crate::decorator::DependencyCacheDecorator;
+
 
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
@@ -280,8 +284,14 @@ impl DependencyCacheBase {
         for mro_class in cls.mro().iter() {
             let mro_class: Bound<'_, PyType> = mro_class.extract()?;
             let namespace = mro_class.getattr("__dict__")?;
-            for item in namespace.call_method0("items")?.try_iter()? {
-                let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
+
+            // change methods to random order, since we do know what order is best
+            let method_names = namespace.call_method0("items")?.try_iter()?;
+            let mut method_names: Vec<_> = method_names.collect();
+            method_names.shuffle(&mut rng());
+
+            for method_name in method_names {
+                let (name, value): (String, Bound<'_, PyAny>) = method_name?.extract()?;
                 if name.starts_with("__") || !visited.insert(name.clone()) {
                     continue;
                 }
