@@ -286,11 +286,7 @@ impl DependencyCacheBase {
             let mro_class: Bound<'_, PyType> = mro_class.extract()?;
             let namespace = mro_class.getattr("__dict__")?;
 
-            // change methods to random order, since we do know what order is best
             let method_names = namespace.call_method0("items")?.try_iter()?;
-            let mut method_names: Vec<_> = method_names.collect();
-            method_names.shuffle(&mut rng());
-
             for method_name in method_names {
                 let (name, value): (String, Bound<'_, PyAny>) = method_name?.extract()?;
                 if name.starts_with("__") || !visited.insert(name.clone()) {
@@ -305,6 +301,8 @@ impl DependencyCacheBase {
         }
 
         let result = PyDict::new(py);
+        // change methods to random order, since we do know what order is best
+        serialisable_methods.shuffle(&mut rng());
         for method_name in serialisable_methods {
             let value = slf.call_method(&method_name, (), None)?;
             result.set_item(method_name, value)?;
