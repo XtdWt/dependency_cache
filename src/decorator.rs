@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use crate::dependency_cache_base::DependencyCacheBase;
-use crate::normalise_fn_signature::normalise_function_signature_and_hash;
+use crate::py_introspection_utils::normalise_function_signature_and_hash;
 
 #[pyclass(frozen)]
 pub struct DependencyCacheDecorator {

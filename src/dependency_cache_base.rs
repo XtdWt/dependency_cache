@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::normalise_fn_signature::normalise_function_signature_and_hash;
+use crate::py_introspection_utils::normalise_function_signature_and_hash;
 use crate::decorator::DependencyCacheDecorator;
 
 
@@ -145,6 +145,7 @@ impl DependencyCacheBase {
     //     slf.borrow_mut().method_dependency_graph = graph;
     //     return Ok(());
     // }
+
     pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(hash) {
             return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
