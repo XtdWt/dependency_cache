@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::normalise_method_args::normalise_and_hash_method;
+use crate::normalise_fn_signature::normalise_function_signature_and_hash;
 use crate::decorator::DependencyCacheDecorator;
 
 
@@ -156,7 +156,7 @@ impl DependencyCacheBase {
     pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> Option<Py<PyAny>> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
+        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
 
         if self.method_dependency_graph.is_valid(hash) {
             self.cache.get(&hash).map(|obj| obj.clone_ref(py))
@@ -169,7 +169,7 @@ impl DependencyCacheBase {
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let Ok((hash, _)) = normalise_and_hash_method(py, &method_name, None, &empty_args, kwargs_bound) else {
+        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
             return;
         };
 
@@ -323,7 +323,7 @@ impl DependencyCacheBase {
             let _ = slf.call_method(&method_name, (), None)?;
 
             let empty_args = PyTuple::empty(py);
-            let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, None)
+            let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, None)
                 .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
 
             slf.borrow_mut().cache.insert(hash, loaded_value.unbind());

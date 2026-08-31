@@ -2,7 +2,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyString, PyTuple};
 
 
-pub fn normalise_and_hash_method<'py>(
+pub fn normalise_function_signature_and_hash<'py>(
     py: Python<'py>,
     func_name: &str,
     func: Option<&Bound<'py, PyAny>>,

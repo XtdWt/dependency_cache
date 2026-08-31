@@ -3,7 +3,7 @@ use pyo3::types::{PyDict, PyList, PyTuple};
 use pyo3::exceptions::PyValueError;
 
 use crate::decorator::DependencyCacheDecorator;
-use crate::normalise_method_args::normalise_and_hash_method;
+use crate::normalise_fn_signature::normalise_function_signature_and_hash;
 
 
 pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<()> {
@@ -95,7 +95,7 @@ impl ManualDependencyCacheDecoratorFactory {
             .dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_and_hash_method(
+                let (hash, _) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,
@@ -158,7 +158,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
             .dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_and_hash_method(
+                let (hash, _) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,
