@@ -100,8 +100,7 @@ uv run ./python/examples/example.py
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
 Current TODO list (in no particular order):
-- load and dump cache methods for base class
-- add back in ast parsing
+- add back in ast parsing, to decorator factory
 - move plot_dependency_graph to rust side instead of python
 - add object thread safety for python 3.14+
 - work out how best to handle nested objects

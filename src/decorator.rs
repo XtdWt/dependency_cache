@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use crate::dependency_cache_base::DependencyCacheBase;
-use crate::normalise_method_args::normalise_and_hash_method;
+use crate::py_introspection_utils::normalise_function_signature_and_hash;
 
 #[pyclass(frozen)]
 pub struct DependencyCacheDecorator {
@@ -62,7 +62,7 @@ impl DependencyCacheDecorator {
         })?;
 
         let func = self.func.bind(py);
-        let (hash, metadata) = normalise_and_hash_method(py, &self.method_name, Some(func), args, kwargs)?;
+        let (hash, metadata) = normalise_function_signature_and_hash(py, &self.method_name, Some(func), args, kwargs)?;
 
         // 1. add/check child dependencies
         base.borrow_mut().add_children_dependencies(hash, self.dependencies.clone(), metadata.unbind());

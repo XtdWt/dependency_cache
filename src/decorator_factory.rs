@@ -1,59 +1,9 @@
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyList, PyTuple};
-use pyo3::exceptions::PyValueError;
+use pyo3::types::{PyDict, PyTuple};
 
 use crate::decorator::DependencyCacheDecorator;
-use crate::normalise_method_args::normalise_and_hash_method;
+use crate::py_introspection_utils::{normalise_function_signature_and_hash, parse_dependencies, validate_self_only_method};
 
-
-pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyResult<()> {
-    let inspect = py.import("inspect")?;
-    let builtins = py.import("builtins")?;
-    let signature = inspect.call_method1("signature", (func,))?;
-    // really ugly, but the inspect.Signature type is not extractable
-    let parameters = signature.getattr("parameters")?;
-    let list_obj = builtins.call_method1("list", (parameters,))?;
-    let param_names: Vec<String> = list_obj.extract()?;
-
-    if param_names.len() != 1 || param_names[0] != "self" {
-        let msg = format!(
-            "Serialisable method must have exactly one parameter named 'self', got: {:?}",
-            param_names
-        );
-        return Err(PyValueError::new_err(msg));
-    }
-    Ok(())
-}
-
-
-fn parse_dependencies(py: Python<'_>, dep_list: &Bound<'_, PyAny>) -> PyResult<Vec<(String, Py<PyDict>)>> {
-    let list = dep_list.cast::<PyList>()?;
-    let mut parsed = Vec::with_capacity(list.len());
-
-    for item in list.iter() {
-        if let Ok(tuple) = item.cast::<PyTuple>() {
-            if tuple.len() == 2 {
-                let method_name: String = tuple.get_item(0)?.extract()?;
-                let kwargs = tuple.get_item(1)?;
-                let kwargs_dict = kwargs.cast::<PyDict>()?;
-                parsed.push((method_name, kwargs_dict.clone().unbind()));
-                continue;
-            }
-        }
-
-        if let Ok(method_name) = item.extract::<String>() {
-            let empty_dict = PyDict::new(py);
-            parsed.push((method_name, empty_dict.unbind()));
-            continue;
-        }
-
-        return Err(PyValueError::new_err(
-            "Dependency must be a tuple (str, dict) or a str",
-        ));
-    }
-
-    return Ok(parsed);
-}
 
 #[pyclass(name = "dependency_cached", frozen)]
 pub struct ManualDependencyCacheDecoratorFactory {
@@ -95,7 +45,7 @@ impl ManualDependencyCacheDecoratorFactory {
             .dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_and_hash_method(
+                let (hash, _) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,
@@ -158,7 +108,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
             .dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_and_hash_method(
+                let (hash, _) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,

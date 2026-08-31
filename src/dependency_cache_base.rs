@@ -2,11 +2,15 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
 use pyo3::exceptions::PyValueError;
 
+use rand::rng;
+use rand::seq::SliceRandom;
+
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::normalise_method_args::normalise_and_hash_method;
+use crate::py_introspection_utils::normalise_function_signature_and_hash;
 use crate::decorator::DependencyCacheDecorator;
+
 
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
@@ -141,6 +145,7 @@ impl DependencyCacheBase {
     //     slf.borrow_mut().method_dependency_graph = graph;
     //     return Ok(());
     // }
+
     pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(hash) {
             return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
@@ -152,7 +157,7 @@ impl DependencyCacheBase {
     pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> Option<Py<PyAny>> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
+        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
 
         if self.method_dependency_graph.is_valid(hash) {
             self.cache.get(&hash).map(|obj| obj.clone_ref(py))
@@ -165,7 +170,7 @@ impl DependencyCacheBase {
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let Ok((hash, _)) = normalise_and_hash_method(py, &method_name, None, &empty_args, kwargs_bound) else {
+        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
             return;
         };
 
@@ -280,8 +285,14 @@ impl DependencyCacheBase {
         for mro_class in cls.mro().iter() {
             let mro_class: Bound<'_, PyType> = mro_class.extract()?;
             let namespace = mro_class.getattr("__dict__")?;
-            for item in namespace.call_method0("items")?.try_iter()? {
-                let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
+
+            // change methods to random order, since we do know what order is best
+            let method_names = namespace.call_method0("items")?.try_iter()?;
+            let mut method_names: Vec<_> = method_names.collect();
+            method_names.shuffle(&mut rng());
+
+            for method_name in method_names {
+                let (name, value): (String, Bound<'_, PyAny>) = method_name?.extract()?;
                 if name.starts_with("__") || !visited.insert(name.clone()) {
                     continue;
                 }
@@ -313,7 +324,7 @@ impl DependencyCacheBase {
             let _ = slf.call_method(&method_name, (), None)?;
 
             let empty_args = PyTuple::empty(py);
-            let (hash, _) = normalise_and_hash_method(py, &method_name, None, &empty_args, None)
+            let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, None)
                 .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
 
             slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
