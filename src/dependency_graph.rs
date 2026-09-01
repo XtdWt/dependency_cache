@@ -8,6 +8,7 @@ pub enum ValidationState {
     Invalid,
     PermanentlyInvalid,
 }
+
 pub struct MethodDependencyGraph<T, M = ()> {
     validation_state: HashMap<T, ValidationState>,
     dependency_graph: HashMap<T, HashSet<T>>,  // maps child_name to set[parents_name], for ease of traversal
@@ -40,7 +41,7 @@ impl<T: Eq + Hash + Clone, M> MethodDependencyGraph<T, M> {
     }
 
     pub fn add_children_dependency(&mut self, method: T, dependencies: Vec<T>, metadata: M) -> () {
-        if self.validation_state.contains_key(&method) {
+        if self.metadata_map.contains_key(&method) {
             return ();
         }
         self.validation_state.insert(method.clone(), ValidationState::Invalid);

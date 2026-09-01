@@ -82,44 +82,6 @@ impl DependencyCacheBase {
         self.method_dependency_graph
             .add_children_dependency(hash, dependency, metadata);
     }
-
-    // fn build_dependency_graph(cls: &Bound<'_, PyType>) -> PyResult<MethodDependencyGraph> {
-    //     let mut graph = MethodDependencyGraph::new();
-    //     let mut visited = HashSet::new();
-    //     let mut use_cache_methods = HashSet::new();
-
-    //     for mro_class in cls.mro().iter() {
-    //         let mro_class: Bound<'_, PyType> = mro_class.extract()?;
-    //         let namespace = mro_class.getattr("__dict__")?;
-
-    //         for item in namespace.call_method0("items")?.try_iter()? {
-    //             let (name, value): (String, Bound<'_, PyAny>) = item?.extract()?;
-
-    //             if name.starts_with("__") || !visited.insert(name.clone()) {
-    //                 continue;
-    //             }
-
-    //             let Ok(decorator) = value.cast::<DependencyCacheDecorator>() else {
-    //                 continue;
-    //             };
-    //             let decorator = decorator.borrow();
-    //             if !decorator.use_cache {
-    //                 use_cache_methods.insert(name.clone());
-    //             };
-    //             graph.add_dependency(name, decorator.dependencies.clone());
-    //         }
-    //     }
-    //     let to_invalidate: Vec<String> = use_cache_methods
-    //         .iter()
-    //         .flat_map(|x| graph.methods_to_invalidate(x.to_string()))
-    //         .collect::<HashSet<String>>()
-    //         .into_iter()
-    //         .collect();
-    //     for method_name in to_invalidate {
-    //         graph.permanently_invalidate(method_name);
-    //     };
-    //     return Ok(graph);
-    // }
 }
 
 #[pymethods]
@@ -133,18 +95,6 @@ impl DependencyCacheBase {
             call_stack: Vec::new(),
         };
     }
-
-    // #[pyo3(signature = (*_args, **_kwargs))]
-    // fn __init__(
-    //     slf: &Bound<'_, Self>,
-    //     _args: &Bound<'_, PyTuple>,
-    //     _kwargs: Option<&Bound<'_, PyDict>>,
-    // ) -> PyResult<()> {
-    //     let cls = slf.get_type();
-    //     let graph = Self::build_dependency_graph(&cls)?;
-    //     slf.borrow_mut().method_dependency_graph = graph;
-    //     return Ok(());
-    // }
 
     pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(hash) {
