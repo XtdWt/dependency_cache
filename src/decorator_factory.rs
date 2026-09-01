@@ -55,7 +55,7 @@ impl ManualDependencyCacheDecoratorFactory {
                     method_name,
                     None,
                     &empty_args,
-                    Some(&kwargs.bind(py)),
+                    Some(kwargs.bind(py)),
                 )?;
                 Ok(hash)
             })
@@ -125,7 +125,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
                     method_name,
                     None,
                     &empty_args,
-                    Some(&kwargs.bind(py)),
+                    Some(kwargs.bind(py)),
                 )?;
                 Ok(hash)
             })

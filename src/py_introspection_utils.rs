@@ -192,11 +192,12 @@ pub fn ast_inspect_method_dependencies(py: Python<'_>, python_func: &Py<PyAny>) 
 
     for node in ast_tree.getattr("body")?.try_iter()? {
         let node = node?;
-        if node.is_instance(&ast_function)? || node.is_instance(&ast_async_function)? {
-            for statement in node.getattr("body")?.try_iter()? {
-                let statement = statement?;
-                visit(py, &statement, &ast_module, &mut dependencies, &mut visited)?
-            }
+        if !node.is_instance(&ast_function)? && !node.is_instance(&ast_async_function)? {
+            continue;
+        }
+        for statement in node.getattr("body")?.try_iter()? {
+            let statement = statement?;
+            visit(py, &statement, &ast_module, &mut dependencies, &mut visited)?
         }
     };
     return Ok(dependencies);
