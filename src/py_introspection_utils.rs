@@ -126,28 +126,37 @@ fn visit(
     let ast_attribute = ast_module.getattr("Attribute")?;
     let ast_name = ast_module.getattr("Name")?;
 
-    if node.is_instance(&ast_call)? {
+    let attr = (|| -> PyResult<Option<String>> {
+        if !node.is_instance(&ast_call)? {
+            return Ok(None);
+        }
         let args = node.getattr("args")?;
         let keywords = node.getattr("keywords")?;
+        if args.len()? != 0 || keywords.len()? != 0 {
+            return Ok(None);
+        }
+        let func = node.getattr("func")?;
+        if !func.is_instance(&ast_attribute)? {
+            return Ok(None);
+        }
+        let value = func.getattr("value")?;
+        if !value.is_instance(&ast_name)? {
+            return Ok(None);
+        }
+        let id: String = value.getattr("id")?.extract()?;
+        if id != "self" {
+            return Ok(None);
+        }
+        Ok(Some(func.getattr("attr")?.extract()?))
+    })()?;
 
-        if args.len()? == 0 && keywords.len()? == 0 {
-            let func = node.getattr("func")?;
-            if func.is_instance(&ast_attribute)? {
-                let value = func.getattr("value")?;
-                if value.is_instance(&ast_name)? {
-                    let id: String = value.getattr("id")?.extract()?;
-                    if id == "self" {
-                        let attr: String = func.getattr("attr")?.extract()?;
-
-                        if visited.insert(attr.clone()) {
-                            let empty_dict = PyDict::new(py);
-                            dependencies.push((attr, empty_dict.unbind()));
-                        }
-                    }
-                }
-            }
+    if let Some(attr) = attr {
+        if visited.insert(attr.clone()) {
+            let empty_dict = PyDict::new(py);
+            dependencies.push((attr, empty_dict.unbind()));
         }
     }
+
 
     for child in ast_module
         .call_method1("iter_child_nodes", (node,))?
