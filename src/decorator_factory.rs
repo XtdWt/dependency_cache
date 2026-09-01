@@ -2,7 +2,12 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use crate::decorator::DependencyCacheDecorator;
-use crate::py_introspection_utils::{normalise_function_signature_and_hash, parse_dependencies, validate_self_only_method};
+use crate::py_introspection_utils::{
+    normalise_function_signature_and_hash,
+    parse_dependencies,
+    validate_self_only_method,
+    ast_inspect_method_dependencies,
+};
 
 
 #[pyclass(name = "dependency_cached", frozen)]
@@ -50,7 +55,7 @@ impl ManualDependencyCacheDecoratorFactory {
                     method_name,
                     None,
                     &empty_args,
-                    Some(&kwargs.bind(py)),
+                    Some(kwargs.bind(py)),
                 )?;
                 Ok(hash)
             })
@@ -72,7 +77,7 @@ impl ManualDependencyCacheDecoratorFactory {
 #[pyclass(name = "automagically_dependency_cached", frozen)]
 pub struct AutomagicDependencyCacheDecoratorFactory {
     use_cache: bool,
-    dependencies: Vec<(String, Py<PyDict>)>,
+    dependencies: Option<Vec<(String, Py<PyDict>)>>,
     track_runtime_dependencies: bool,
     serialisable: bool,
 }
@@ -89,9 +94,9 @@ impl AutomagicDependencyCacheDecoratorFactory {
         serialisable: bool,
     ) -> PyResult<Self> {
         let parsed_deps = if let Some(list) = dependencies {
-            parse_dependencies(py, list)?
+            Some(parse_dependencies(py, list)?)
         } else {
-            Vec::new()
+            None
         };
         return Ok(Self {
             use_cache,
@@ -104,8 +109,15 @@ impl AutomagicDependencyCacheDecoratorFactory {
     fn __call__(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<DependencyCacheDecorator> {
         let method_name: String = func.getattr(py, "__name__")?.extract(py)?;
         let empty_args = PyTuple::empty(py);
-        let hashed_dependencies: Vec<isize> = self
-            .dependencies
+        let ast_dependencies;
+        let dependencies: &Vec<(String, Py<PyDict>)> = match &self.dependencies {
+            None => {
+                ast_dependencies = ast_inspect_method_dependencies(py, &func)?;
+                &ast_dependencies
+            }
+            Some(deps) => deps,
+        };
+        let hashed_dependencies: Vec<isize> = dependencies
             .iter()
             .map(|(method_name, kwargs)| {
                 let (hash, _) = normalise_function_signature_and_hash(
@@ -113,7 +125,7 @@ impl AutomagicDependencyCacheDecoratorFactory {
                     method_name,
                     None,
                     &empty_args,
-                    Some(&kwargs.bind(py)),
+                    Some(kwargs.bind(py)),
                 )?;
                 Ok(hash)
             })
