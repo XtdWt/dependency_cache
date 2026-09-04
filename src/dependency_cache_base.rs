@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::py_introspection_utils::{normalise_function_signature_and_hash, parse_dependencies};
+use crate::py_introspection_utils::normalise_function_signature_and_hash;
 use crate::decorator::DependencyCacheDecorator;
 
 
