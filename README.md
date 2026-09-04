@@ -2,10 +2,9 @@
 ## 🚧 Work In Progress 🚧
 
 ### Description
-A library for managing the caching of an object's methods with cache invalidation handled by a dependency graph.
-Instead of recomputing expensive, deeply nested calculations on every call, Dependency Cache stores the result and only invalidates (and recalculates) it when one of its dependencies actually changes.
-This project is written in rust, with [pyo3](https://github.com/PyO3/pyo3), and compiled using [maturin](https://github.com/PyO3/maturin).
-
+Dependency Cache is a caching layer for object methods, with invalidation driven by a dependency graph.
+Rather than re-running expensive, deeply nested calculations on every call, it stores each method's result and only recomputes (and marks downstream methods for recalculation) when one of its declared dependencies actually changes.
+Under the hood, this project is written in Rust using [pyo3](https://github.com/PyO3/pyo3) and built with [maturin](https://github.com/PyO3/maturin).
 ### Installation
 
 Install the latest stable version from [PyPI](https://pypi.org/project/dependency-cache/):
@@ -19,14 +18,15 @@ pip install dependency-cache
 | Export | What it's for |
 |---|---|
 | `DependencyCacheBase` | Base class to inherit from. Gives your instance a cache and a dependency graph. |
-| `dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=False)` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
-| `automagically_dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=True)` | A decorator which **automagically infers** the direct dependencies. Optionally override the defaults and inference using the `dependencies` parameter. |
+| `dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=False, serialisable=False)` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
+| `automagically_dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=True, serialisable=False)` | A decorator which **automagically infers** the direct dependencies. Optionally override the defaults and inference using the `dependencies` parameter. |
 | `plot_dependency_graph(obj, **kwargs)` | Visualizes an instance's dependency graph, for inspection/debugging. |
 
 ### Setup
 This project uses (and requires) [uv](https://github.com/astral-sh/uv) as a package manager and maturin to compile.
 
-Steps:
+To set up a local dev environment:
+
 - install python dependencies
 ```bash
 uv sync
