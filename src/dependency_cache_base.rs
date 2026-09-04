@@ -290,20 +290,36 @@ impl DependencyCacheBase {
             .map(|k| k.extract::<String>())
             .collect::<PyResult<Vec<_>>>()?;
 
+        let class = slf.get_type();
+
         let load_method = |name: &str| -> PyResult<()> {
-            let Some(loaded_value) = data.get_item(name)? else {
-                return Ok(());
+            let loaded_value = match data.get_item(name)? {
+                Some(val) => val,
+                None => return Ok(()),
             };
-            let method = slf.getattr(name)?;
-            let decorator = method.cast::<DependencyCacheDecorator>()?;
-            if !decorator.borrow().serialisable {
+
+            let method_attr = class.getattr(name)?;
+
+            let decorator = method_attr
+                .cast::<DependencyCacheDecorator>()
+                .map_err(|_| {
+                    PyValueError::new_err(format!(
+                        "Method '{}' is not decorated with @dependency_cached",
+                        name
+                    ))
+                })?;
+
+            let decorator_ref = decorator.borrow();
+
+
+            if !decorator_ref.serialisable {
                 return Err(PyValueError::new_err(format!(
-                    "Trying to load value into method: '{}' is not marked as serialisable",
+                    "Method '{}' is not marked as serialisable",
                     name
                 )));
             }
 
-            let underlying_func = decorator.getattr("func")?;
+            let underlying_func = decorator_ref.func.bind(py);
             validate_self_only_method(py, &underlying_func)?;
 
             let _ = slf.call_method(name, (), None)?;
