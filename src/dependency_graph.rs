@@ -159,6 +159,14 @@ impl<T: Eq + Hash + Clone, M> MethodDependencyGraph<T, M> {
     where M: Clone {
         return self.metadata_map.clone();
     }
+
+    pub fn invalidate_all(&mut self) {
+        for state in self.validation_state.values_mut() {
+            if *state == ValidationState::Valid {
+                *state = ValidationState::Invalid;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

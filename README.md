@@ -1,5 +1,5 @@
 # Dependency Cache
-## :construction: Work In Progress :construction:
+## 🚧 Work In Progress 🚧
 
 ### Description
 A library for managing the caching of an object's methods with cache invalidation handled by a dependency graph.
@@ -100,8 +100,8 @@ uv run ./python/examples/example.py
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
 Current TODO list (in no particular order):
-- scenario analysis capability
-- allow input to control ordering for cache dump
-- move plot_dependency_graph to rust side instead of python
+- scenario analysis capability (add temporary cache to base)
+- add validation to static dependencies, ensure methods are of decorator class
+- improve plot_dependency_graph (maybe to GUI?) with moveable nodes
 - add object thread safety for python 3.14+
 - work out how best to handle nested objects

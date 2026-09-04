@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::py_introspection_utils::normalise_function_signature_and_hash;
+use crate::py_introspection_utils::{normalise_function_signature_and_hash, validate_self_only_method};
 use crate::decorator::DependencyCacheDecorator;
 
 
@@ -82,6 +82,13 @@ impl DependencyCacheBase {
         self.method_dependency_graph
             .add_children_dependency(hash, dependency, metadata);
     }
+
+    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
+        if self.method_dependency_graph.is_valid(hash) {
+            return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
+        }
+        return None;
+    }
 }
 
 #[pymethods]
@@ -94,13 +101,6 @@ impl DependencyCacheBase {
             method_dependency_graph: MethodDependencyGraph::new(),
             call_stack: Vec::new(),
         };
-    }
-
-    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
-        if self.method_dependency_graph.is_valid(hash) {
-            return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
-        }
-        return None;
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
@@ -130,6 +130,7 @@ impl DependencyCacheBase {
     }
 
     pub fn clear_cache(&mut self) {
+        self.method_dependency_graph.invalidate_all();
         self.cache.clear();
     }
 
@@ -226,7 +227,8 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
-    pub fn dump_cache<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    #[pyo3(signature = (order=None))]
+    pub fn dump_cache<'py>(slf: &Bound<'py, Self>, py: Python<'py>, order: Option<Vec<String>>) -> PyResult<Bound<'py, PyDict>> {
         let cls = slf.get_type();
 
         let mut visited = HashSet::new();
@@ -250,10 +252,24 @@ impl DependencyCacheBase {
             }
         }
 
+        // methods from order first
+        let mut ordered_methods = Vec::new();
+        let mut remaining: HashSet<String> = serialisable_methods.into_iter().collect();
+        if let Some(order_vec) = order {
+            let mut seen = HashSet::new();
+            for name in order_vec {
+                if seen.insert(name.clone()) && remaining.remove(&name) {
+                    ordered_methods.push(name);
+                }
+            }
+        }
+        // randomise for the rest of the methods
+        let mut remaining_vec: Vec<String> = remaining.into_iter().collect();
+        remaining_vec.shuffle(&mut rng());
+        ordered_methods.extend(remaining_vec);
+
         let result = PyDict::new(py);
-        // change methods to random order, since we do know what order is best
-        serialisable_methods.shuffle(&mut rng());
-        for method_name in serialisable_methods {
+        for method_name in ordered_methods {
             let value = slf.call_method(&method_name, (), None)?;
             result.set_item(method_name, value)?;
         }
@@ -261,21 +277,82 @@ impl DependencyCacheBase {
         Ok(result)
     }
 
+    #[pyo3(signature = (data, order=None))]
     pub fn load_cache<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
         data: Bound<'py, PyDict>,
+        order: Option<Vec<String>>,
     ) -> PyResult<()> {
-        for (key, loaded_value) in data.iter() {
-            let method_name: String = key.extract()?;
+        let all_keys: Vec<String> = data
+            .keys()
+            .into_iter()
+            .map(|k| k.extract::<String>())
+            .collect::<PyResult<Vec<_>>>()?;
 
-            let _ = slf.call_method(&method_name, (), None)?;
+        let class = slf.get_type();
+
+        let load_method = |name: &str| -> PyResult<()> {
+            let loaded_value = match data.get_item(name)? {
+                Some(val) => val,
+                None => return Ok(()),
+            };
+
+            let method_attr = class.getattr(name)?;
+
+            let decorator = method_attr
+                .cast::<DependencyCacheDecorator>()
+                .map_err(|_| {
+                    PyValueError::new_err(format!(
+                        "Method '{}' is not decorated with @dependency_cached",
+                        name
+                    ))
+                })?;
+
+            let decorator_ref = decorator.borrow();
+
+
+            if !decorator_ref.serialisable {
+                return Err(PyValueError::new_err(format!(
+                    "Method '{}' is not marked as serialisable",
+                    name
+                )));
+            }
+
+            let underlying_func = decorator_ref.func.bind(py);
+            validate_self_only_method(py, &underlying_func)?;
+
+            let _ = slf.call_method(name, (), None)?;
 
             let empty_args = PyTuple::empty(py);
-            let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, None)
-                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
-
+            let (hash, _) = normalise_function_signature_and_hash(py, name, None, &empty_args, None)
+                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", name, e)))?;
             slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
+            Ok(())
+        };
+
+        let mut loaded = HashSet::new();
+
+        // methods from order first
+        if let Some(order_vec) = order {
+            for name in order_vec {
+                if loaded.contains(&name) {
+                    continue;
+                }
+                load_method(&name)?;
+                loaded.insert(name.to_string());
+            }
+        }
+
+        let mut remaining_keys: Vec<String> = all_keys
+            .into_iter()
+            .filter(|name| !loaded.contains(name))
+            .collect();
+
+        // randomise for the rest of the methods
+        remaining_keys.shuffle(&mut rng());
+        for name in remaining_keys {
+            load_method(&name)?;
         }
 
         Ok(())
