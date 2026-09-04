@@ -277,21 +277,53 @@ impl DependencyCacheBase {
         Ok(result)
     }
 
+    #[pyo3(signature = (data, order=None))]
     pub fn load_cache<'py>(
         slf: &Bound<'_, Self>,
         py: Python<'py>,
         data: Bound<'py, PyDict>,
+        order: Option<Vec<String>>,
     ) -> PyResult<()> {
-        for (key, loaded_value) in data.iter() {
-            let method_name: String = key.extract()?;
+        let all_keys: Vec<String> = data
+            .keys()
+            .into_iter()
+            .map(|k| k.extract::<String>())
+            .collect::<PyResult<Vec<_>>>()?;
 
-            let _ = slf.call_method(&method_name, (), None)?;
-
+        let load_method = |name: &str| -> PyResult<()> {
+            let Some(loaded_value) = data.get_item(name)? else {
+                return Ok(());
+            };
+            let _ = slf.call_method(name, (), None)?;
             let empty_args = PyTuple::empty(py);
-            let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, None)
-                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", method_name, e)))?;
-
+            let (hash, _) = normalise_function_signature_and_hash(py, name, None, &empty_args, None)
+                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", name, e)))?;
             slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
+            Ok(())
+        };
+
+        let mut loaded = HashSet::new();
+
+        // methods from order first
+        if let Some(order_vec) = order {
+            for name in order_vec {
+                if loaded.contains(&name) {
+                    continue;
+                }
+                load_method(&name)?;
+                loaded.insert(name.to_string());
+            }
+        }
+
+        let mut remaining_keys: Vec<String> = all_keys
+            .into_iter()
+            .filter(|name| !loaded.contains(name))
+            .collect();
+
+        // randomise for the rest of the methods
+        remaining_keys.shuffle(&mut rng());
+        for name in remaining_keys {
+            load_method(&name)?;
         }
 
         Ok(())
