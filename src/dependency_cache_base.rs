@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::py_introspection_utils::normalise_function_signature_and_hash;
+use crate::py_introspection_utils::{normalise_function_signature_and_hash, validate_self_only_method};
 use crate::decorator::DependencyCacheDecorator;
 
 
@@ -294,7 +294,20 @@ impl DependencyCacheBase {
             let Some(loaded_value) = data.get_item(name)? else {
                 return Ok(());
             };
+            let method = slf.getattr(name)?;
+            let decorator = method.cast::<DependencyCacheDecorator>()?;
+            if !decorator.borrow().serialisable {
+                return Err(PyValueError::new_err(format!(
+                    "Trying to load value into method: '{}' is not marked as serialisable",
+                    name
+                )));
+            }
+
+            let underlying_func = decorator.getattr("func")?;
+            validate_self_only_method(py, &underlying_func)?;
+
             let _ = slf.call_method(name, (), None)?;
+
             let empty_args = PyTuple::empty(py);
             let (hash, _) = normalise_function_signature_and_hash(py, name, None, &empty_args, None)
                 .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", name, e)))?;
