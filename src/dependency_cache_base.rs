@@ -8,7 +8,7 @@ use rand::seq::SliceRandom;
 use std::collections::{HashMap, HashSet};
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
-use crate::py_introspection_utils::normalise_function_signature_and_hash;
+use crate::py_introspection_utils::{normalise_function_signature_and_hash, parse_dependencies};
 use crate::decorator::DependencyCacheDecorator;
 
 
@@ -227,7 +227,8 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
-    pub fn dump_cache<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+    #[pyo3(signature = (order=None))]
+    pub fn dump_cache<'py>(slf: &Bound<'py, Self>, py: Python<'py>, order: Option<Vec<String>>) -> PyResult<Bound<'py, PyDict>> {
         let cls = slf.get_type();
 
         let mut visited = HashSet::new();
@@ -251,10 +252,24 @@ impl DependencyCacheBase {
             }
         }
 
+        // methods from order first
+        let mut ordered_methods = Vec::new();
+        let mut remaining: HashSet<String> = serialisable_methods.into_iter().collect();
+        if let Some(order_vec) = order {
+            let mut seen = HashSet::new();
+            for name in order_vec {
+                if seen.insert(name.clone()) && remaining.remove(&name) {
+                    ordered_methods.push(name);
+                }
+            }
+        }
+        // randomise for the rest of the methods
+        let mut remaining_vec: Vec<String> = remaining.into_iter().collect();
+        remaining_vec.shuffle(&mut rng());
+        ordered_methods.extend(remaining_vec);
+
         let result = PyDict::new(py);
-        // change methods to random order, since we do know what order is best
-        serialisable_methods.shuffle(&mut rng());
-        for method_name in serialisable_methods {
+        for method_name in ordered_methods {
             let value = slf.call_method(&method_name, (), None)?;
             result.set_item(method_name, value)?;
         }
