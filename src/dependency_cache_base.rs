@@ -82,6 +82,13 @@ impl DependencyCacheBase {
         self.method_dependency_graph
             .add_children_dependency(hash, dependency, metadata);
     }
+
+    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
+        if self.method_dependency_graph.is_valid(hash) {
+            return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
+        }
+        return None;
+    }
 }
 
 #[pymethods]
@@ -94,13 +101,6 @@ impl DependencyCacheBase {
             method_dependency_graph: MethodDependencyGraph::new(),
             call_stack: Vec::new(),
         };
-    }
-
-    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
-        if self.method_dependency_graph.is_valid(hash) {
-            return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
-        }
-        return None;
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
