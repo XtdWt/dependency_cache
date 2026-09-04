@@ -130,6 +130,7 @@ impl DependencyCacheBase {
     }
 
     pub fn clear_cache(&mut self) {
+        self.method_dependency_graph.invalidate_all();
         self.cache.clear();
     }
 
