@@ -90,7 +90,7 @@ c.update_cached_value("A", 0)  # invalidates C (but not B)
 print(c.C())  # recalculates C -> 5
 ```
 
-This example can be found [here](/python/examples/example.py) with more runnable examples and use cases provided in the [python/examples](/python/examples) folder.
+This example can be found [here](https://github.com/XtdWt/dependency_cache/blob/master/python/examples/example.py) with more runnable examples and use cases provided in the [python/examples](https://github.com/XtdWt/dependency_cache/tree/master/python/examples) folder.
 
 ```bash
 uv run ./python/examples/example.py
