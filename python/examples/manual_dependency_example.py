@@ -41,6 +41,7 @@ class ExampleCalculationManual(DependencyCacheBase):
 
 
 if __name__ == "__main__":
+    print("example of manually declaring dependencies")
     print("D     E")
     print(" \\   /")
     print("   C")

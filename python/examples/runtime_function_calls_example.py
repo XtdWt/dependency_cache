@@ -16,7 +16,14 @@ class FibonacciExample(DependencyCacheBase):
 
 
 if __name__ == "__main__":
-    print("dependency graph can have runtime function calls cached")
+    print("example of using runtime dependencies, with nested function calls")
+    print("Fib(3)")
+    print("|  \\")
+    print("|  Fib(2)")
+    print("|  |  \\")
+    print("----> Fib(1)")
+    print("   |    \\")
+    print("   ----> Fib(0)")
     c = FibonacciExample()
 
     print(f"Result of Fib(3) {c.Calculate(3)}")  # calculates Calculate(3), Calculate(2), Calculate(1), Calculate(0)

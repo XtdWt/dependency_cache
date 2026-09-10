@@ -32,14 +32,29 @@ class RuntimeGraphExample(DependencyCacheBase):
 
 
 if __name__ == "__main__":
+    print("example of using runtime dependencies")
+    print("graph only partially built!")
+    print("    A")
+    print("  / |")
+    print(" /  |")
+    print("C   B")
     c = RuntimeGraphExample()
     print(c.A())  # calculates A, prints 1000
-    print("graph only partially built!")
 
-    print("repeatedly updating D!")
+    print("updating D!")
+    print(c.D())
     c.update_cached_value("D", 1)
-    c.update_cached_value("D", 2)
+    print(c.D())
     c.update_cached_value("D", 3)
-
+    print(c.D())
     print(c.A())  # no calculation, returns cached 1000
+
+    print("graph fully built!")
+    print("    A")
+    print("  / | \\")
+    print(" /  |  \\")
+    print("C   B   D")
+    c.update_cached_value("B", False)
+    print(c.A())  # calculates A, prints 3
+
     print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
