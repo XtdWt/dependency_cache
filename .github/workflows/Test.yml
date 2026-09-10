@@ -38,8 +38,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
 
+      - name: Create virtualenv
+        run: uv venv .venv --python 3.12
+
       - name: Install test dependencies
-        run: uv pip install --system pytest
+        run: uv pip install pytest
 
       - name: Build extension
         uses: PyO3/maturin-action@v1
