@@ -57,5 +57,5 @@ jobs:
         run: |
           for example in python/examples/*.py; do
             echo "Running $example"
-            python "$example"
+            uv run --no-sync "$example"
           done
