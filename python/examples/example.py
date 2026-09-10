@@ -29,6 +29,7 @@ class ExampleCalculation(DependencyCacheBase):
 
 
 if __name__ == "__main__":
+    print("example of using dependency_cache for recomputation")
     print("   C")
     print(" /   \\")
     print("A     B")

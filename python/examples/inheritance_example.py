@@ -32,7 +32,7 @@ class ParentClass(ChildClass):
 
 
 if __name__ == "__main__":
-    print("dependency graph obeys MRO (standard inheritance method order)")
+    print("example that dependency graph obeys MRO (standard inheritance method order)")
     c = ParentClass()
 
     print(f"Result of A {c.A()}")  # calculates parent A and does not calculates child

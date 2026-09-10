@@ -42,6 +42,7 @@ class ExampleCalculationMagic(DependencyCacheBase):
 
 
 if __name__ == "__main__":
+    print("example of using the automagic parsing of dependencies")
     print("       E")
     print("     /  \\")
     print("    D    \\")
