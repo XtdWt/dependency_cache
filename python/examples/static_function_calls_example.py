@@ -26,7 +26,7 @@ class FunctionCallObj(DependencyCacheBase):
 
 
 if __name__ == "__main__":
-    print("dependency graph can have each function call cached")
+    print("dependency graph can have static function call cached")
     c = FunctionCallObj(1)
 
     print(f"Result of B {c.B()}")  # calculates parent B and does calculates A(0), C, A(1)
