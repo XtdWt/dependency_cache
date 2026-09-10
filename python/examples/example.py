@@ -28,6 +28,7 @@ class ExampleCalculation(DependencyCacheBase):
         return self.B() + self.A()
 
 
+withkasdfjkasdjflasjkfaslkjdflaksjdf
 if __name__ == "__main__":
     print("example of using dependency_cache for recomputation")
     print("   C")
