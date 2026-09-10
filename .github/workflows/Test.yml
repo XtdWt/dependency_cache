@@ -34,3 +34,11 @@ jobs:
         pip install --upgrade pip pytest
         maturin develop --release
         pytest -v
+
+    - name: Ensure Python examples valid
+      run: |
+        source venv/bin/activate
+        for example in python/examples/*.py; do
+          echo "Running $example"
+          python "$example"
+        done
