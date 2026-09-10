@@ -51,7 +51,7 @@ jobs:
           args: --release
 
       - name: Run pytest
-        run: pytest -v
+        run: uv run --no-sync pytest -v
 
       - name: Run Python examples
         run: |
