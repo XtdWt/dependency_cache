@@ -11,7 +11,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 keywords = ["caching", "dependency-graph", "invalidation"]
-version = "0.2.1"
+version = "0.2.2"
 description = "A caching library for Python object methods that utilises a dependency graph to track relationships and control invalidation, enabling efficient recomputation"
 readme = "README.md"
 license = { text = "MIT" }
