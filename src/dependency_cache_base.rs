@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyValueError, PyKeyError};
 
 use rand::rng;
 use rand::seq::SliceRandom;
@@ -12,7 +12,7 @@ use crate::py_introspection_utils::{normalise_function_signature_and_hash, valid
 use crate::decorator::DependencyCacheDecorator;
 
 
-#[pyclass(subclass)]
+#[pyclass]
 pub struct DependencyCacheBase {
     pub cache: HashMap<isize, Py<PyAny>>,
     pub method_dependency_graph: MethodDependencyGraph<isize, Py<PyTuple>>,
@@ -117,21 +117,46 @@ impl DependencyCacheBase {
     }
 
     #[pyo3(signature = (method_name, value, **kwargs))]
-    pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) {
+    pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
         let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
-            return;
+            return Ok(());
         };
 
+        let Some(v) = self.cache.get_mut(&hash) else {
+            return Err(PyKeyError::new_err(format!(
+                "Cannot update cached value for '{method_name}'"
+            )));
+        };
+        *v = value;
         self.method_dependency_graph.temporarily_invalidate(hash);
-        self.cache.insert(hash, value);
         self.method_dependency_graph.validate(hash);
+        return Ok(());
     }
 
     pub fn clear_cache(&mut self) {
         self.method_dependency_graph.invalidate_all();
         self.cache.clear();
+    }
+
+    #[pyo3(signature = (method_name, **kwargs))]
+    pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
+        let empty_args = PyTuple::empty(py);
+        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
+        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
+            return Ok(());
+        };
+
+        let Some(_) = self.cache.get_mut(&hash) else {
+            return Err(PyKeyError::new_err(format!(
+                "Cannot clear cached value for '{method_name}'"
+            )));
+        };
+
+        self.method_dependency_graph.temporarily_invalidate(hash);
+        self.cache.remove(&hash);
+        return Ok(());
     }
 
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
