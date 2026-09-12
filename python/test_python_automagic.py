@@ -160,8 +160,8 @@ def test_init(x_value, y_value):
     assert a is not None
     assert a.x == x_value
     assert a.y == y_value
-    assert a.get_dependency_graph() == {}
-    assert a.get_validation_state() == {}
+    assert a.dependency_graph == {}
+    assert a.validation_state == {}
 
 
 @pytest.mark.parametrize(
@@ -180,12 +180,12 @@ def test_calculation_simple(x_value, y_value, result):
 
     assert a.C() == result
 
-    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "valid"}
+    assert a.dependency_graph == {"A": {"C"}, "B": {"C"}, "C": set()}
+    assert a.validation_state == {"A": "valid", "B": "valid", "C": "valid"}
 
     a.update_cached_value("B", None)
-    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": set()}
-    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "invalid"}
+    assert a.dependency_graph == {"A": {"C"}, "B": {"C"}, "C": set()}
+    assert a.validation_state == {"A": "valid", "B": "valid", "C": "invalid"}
 
 
 @pytest.mark.parametrize(
@@ -205,12 +205,12 @@ def test_calculation_hard(x_value, y_value, result1, result2):
     assert a.D() == result1
     assert a.E() == result2
 
-    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
-    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "valid", "D": "valid", "E": "valid"}
+    assert a.dependency_graph == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
+    assert a.validation_state == {"A": "valid", "B": "valid", "C": "valid", "D": "valid", "E": "valid"}
 
     a.update_cached_value("B", None)
-    assert a.get_dependency_graph() == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
-    assert a.get_validation_state() == {"A": "valid", "B": "valid", "C": "invalid", "D": "invalid", "E": "invalid"}
+    assert a.dependency_graph == {"A": {"C"}, "B": {"C"}, "C": {"D", "E"}, "D": set(), "E": set()}
+    assert a.validation_state == {"A": "valid", "B": "valid", "C": "invalid", "D": "invalid", "E": "invalid"}
 
 
 @pytest.mark.parametrize(
@@ -229,7 +229,7 @@ def test_calculation_harder(x_value, y_value, result):
 
     assert a.F() == result
 
-    assert a.get_dependency_graph() == {
+    assert a.dependency_graph == {
         "A": {"C"},
         "B": {"C"},
         "C": {"D", "E"},
@@ -237,7 +237,7 @@ def test_calculation_harder(x_value, y_value, result):
         "E": {"F"},
         "F": set(),
     }
-    assert a.get_validation_state() == {
+    assert a.validation_state == {
         "A": "valid",
         "B": "valid",
         "C": "valid",
@@ -247,7 +247,7 @@ def test_calculation_harder(x_value, y_value, result):
     }
 
     a.update_cached_value("B", None)
-    assert a.get_dependency_graph() == {
+    assert a.dependency_graph == {
         "A": {"C"},
         "B": {"C"},
         "C": {"D", "E"},
@@ -255,7 +255,7 @@ def test_calculation_harder(x_value, y_value, result):
         "E": {"F"},
         "F": set(),
     }
-    assert a.get_validation_state() == {
+    assert a.validation_state == {
         "A": "valid",
         "B": "valid",
         "C": "invalid",
@@ -267,11 +267,11 @@ def test_calculation_harder(x_value, y_value, result):
 
 def test_permanently_invalid():
     c = UseCacheObj(2)
-    assert c.get_dependency_graph() == {}
-    assert c.get_validation_state() == {}
+    assert c.dependency_graph == {}
+    assert c.validation_state == {}
     c.B()
-    assert c.get_dependency_graph() == {"A": {"B"}, "B": set()}
-    assert c.get_validation_state() == {"A": "permanently invalid", "B": "permanently invalid"}
+    assert c.dependency_graph == {"A": {"B"}, "B": set()}
+    assert c.validation_state == {"A": "permanently invalid", "B": "permanently invalid"}
 
 
 def test_plot_dependency_graph_raises():
@@ -284,14 +284,14 @@ def test_plot_dependency_graph_raises():
 def test_function_calls():
     c = FunctionCallObj(3)
 
-    assert c.get_dependency_graph() == {}
-    assert c.get_validation_state() == {}
+    assert c.dependency_graph == {}
+    assert c.validation_state == {}
 
     result = c.B()
     assert result == 7
 
-    assert c.get_dependency_graph() == {"B": set(), ("A", (("x", 0),)): {"B"}, ("A", (("x", 1),)): {"B"}}
-    assert c.get_validation_state() == {"B": "valid", ("A", (("x", 0),)): "valid", ("A", (("x", 1),)): "valid"}
+    assert c.dependency_graph == {"B": set(), ("A", (("x", 0),)): {"B"}, ("A", (("x", 1),)): {"B"}}
+    assert c.validation_state == {"B": "valid", ("A", (("x", 0),)): "valid", ("A", (("x", 1),)): "valid"}
 
 
 def test_incorrect_decorator_format():

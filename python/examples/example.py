@@ -34,10 +34,10 @@ if __name__ == "__main__":
     print(" /   \\")
     print("A     B")
     c = ExampleCalculation(3, 5)
-    print(f"cache={c.get_cached_values()} graph={c.get_dependency_graph()} validation={c.get_validation_state()}")
+    print(f"cache={c.cached_values} graph={c.dependency_graph} validation={c.validation_state}")
     print(f"Result of C = {c.C()}")  # calculates all, prints 8
-    print(f"cache={c.get_cached_values()} graph={c.get_dependency_graph()} validation={c.get_validation_state()}")
+    print(f"cache={c.cached_values} graph={c.dependency_graph} validation={c.validation_state}")
     print(f"Result of C = {c.C()}")  # hits cache, prints 8
     c.update_cached_value("A", 0)  # invalidates C
     print(f"Result of C = {c.C()}")  # recalculates C returns 5
-    print(f"cache={c.get_cached_values()} graph={c.get_dependency_graph()} validation={c.get_validation_state()}")
+    print(f"cache={c.cached_values} graph={c.dependency_graph} validation={c.validation_state}")

@@ -50,8 +50,8 @@ if __name__ == "__main__":
     print(" A     B   C")
     c = ExampleCalculationMagic(1, 2, 3)
     print(f"Result of E = {c.E()}")  # calculates all, prints 6
-    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
+    print(c.cached_values, c.dependency_graph, c.validation_state)
     print(f"Result of E = {c.E()}")  # no calculation, returns cached 6
     c.update_cached_value("A", 2)  # invalidates D, E
-    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
+    print(c.cached_values, c.dependency_graph, c.validation_state)
     print(f"Result of E = {c.E()}")  # recalculates D, E returns 7

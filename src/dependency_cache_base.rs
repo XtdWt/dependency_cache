@@ -164,6 +164,7 @@ impl DependencyCacheBase {
         Ok(())
     }
 
+    #[getter]
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, value) in &self.cache {
@@ -188,6 +189,7 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
+    #[getter]
     pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
 
@@ -233,6 +235,7 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
+    #[getter]
     pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, state) in &self.method_dependency_graph.clone_state() {
