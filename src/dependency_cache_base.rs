@@ -90,11 +90,11 @@ impl DependencyCacheBase {
         return None;
     }
 
-    fn create_hash(&self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> Option<isize> {
+    fn create_hash(&self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<isize> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
-        return Some(hash);
+        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
+        return Ok(hash);
     }
 }
 
@@ -111,22 +111,29 @@ impl DependencyCacheBase {
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
-    pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> Option<Py<PyAny>> {
+    pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
         let hash = self.create_hash(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(hash) {
-            self.cache.get(&hash).map(|obj| obj.clone_ref(py))
-        } else {
-            None
+            return Ok(self.cache.get(&hash).map(|obj| obj.clone_ref(py)));
         }
+        return Ok(None);
     }
+
+    pub fn is_cached(
+        &self,
+        py: Python<'_>,
+        method_name: String,
+        kwargs: Option<Py<PyDict>>,
+    ) -> PyResult<bool> {
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        Ok(self.method_dependency_graph.is_valid(hash) && self.cache.contains_key(&hash))
+    }
+
 
     #[pyo3(signature = (method_name, value, **kwargs))]
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let maybe_hash = self.create_hash(py, &method_name, &kwargs);
-        let Some(hash) = maybe_hash else {
-            return Ok(());
-        };
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
 
         let Some(v) = self.cache.get_mut(&hash) else {
             return Err(PyKeyError::new_err(format!(
@@ -146,20 +153,15 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let maybe_hash = self.create_hash(py, &method_name, &kwargs);
-        let Some(hash) = maybe_hash else {
-            return Ok(());
-        };
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
 
-        let Some(_) = self.cache.get_mut(&hash) else {
+        if self.cache.remove(&hash).is_none() {
             return Err(PyKeyError::new_err(format!(
                 "Cannot clear cached value for '{method_name}'"
             )));
-        };
-
+        }
         self.method_dependency_graph.temporarily_invalidate(hash);
-        self.cache.remove(&hash);
-        return Ok(());
+        Ok(())
     }
 
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
