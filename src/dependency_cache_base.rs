@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyValueError, PyKeyError};
 
 use rand::rng;
 use rand::seq::SliceRandom;
@@ -89,6 +89,13 @@ impl DependencyCacheBase {
         }
         return None;
     }
+
+    fn create_hash(&self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<isize> {
+        let empty_args = PyTuple::empty(py);
+        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
+        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
+        return Ok(hash);
+    }
 }
 
 #[pymethods]
@@ -104,29 +111,39 @@ impl DependencyCacheBase {
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
-    pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> Option<Py<PyAny>> {
-        let empty_args = PyTuple::empty(py);
-        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
+    pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(hash) {
-            self.cache.get(&hash).map(|obj| obj.clone_ref(py))
-        } else {
-            None
+            return Ok(self.cache.get(&hash).map(|obj| obj.clone_ref(py)));
         }
+        return Ok(None);
     }
 
-    #[pyo3(signature = (method_name, value, **kwargs))]
-    pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) {
-        let empty_args = PyTuple::empty(py);
-        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
-            return;
-        };
+    pub fn is_cached(
+        &self,
+        py: Python<'_>,
+        method_name: String,
+        kwargs: Option<Py<PyDict>>,
+    ) -> PyResult<bool> {
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        Ok(self.method_dependency_graph.is_valid(hash) && self.cache.contains_key(&hash))
+    }
 
+
+    #[pyo3(signature = (method_name, value, **kwargs))]
+    pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
+
+        let Some(v) = self.cache.get_mut(&hash) else {
+            return Err(PyKeyError::new_err(format!(
+                "Cannot update cached value for '{method_name}'"
+            )));
+        };
+        *v = value;
         self.method_dependency_graph.temporarily_invalidate(hash);
-        self.cache.insert(hash, value);
         self.method_dependency_graph.validate(hash);
+        return Ok(());
     }
 
     pub fn clear_cache(&mut self) {
@@ -134,6 +151,20 @@ impl DependencyCacheBase {
         self.cache.clear();
     }
 
+    #[pyo3(signature = (method_name, **kwargs))]
+    pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
+
+        if self.cache.remove(&hash).is_none() {
+            return Err(PyKeyError::new_err(format!(
+                "Cannot clear cached value for '{method_name}'"
+            )));
+        }
+        self.method_dependency_graph.temporarily_invalidate(hash);
+        Ok(())
+    }
+
+    #[getter]
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, value) in &self.cache {
@@ -158,6 +189,7 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
+    #[getter]
     pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
 
@@ -203,6 +235,7 @@ impl DependencyCacheBase {
         Ok(dict)
     }
 
+    #[getter]
     pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, state) in &self.method_dependency_graph.clone_state() {

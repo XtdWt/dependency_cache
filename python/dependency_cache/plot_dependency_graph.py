@@ -7,7 +7,7 @@ from .dependency_cache import DependencyCacheBase
 def plot_dependency_graph(obj, **kwargs) -> None:
     if not isinstance(obj, DependencyCacheBase):
         raise TypeError("provided object must inherit from DependencyCacheBase")
-    graph_data = obj.get_dependency_graph()
+    graph_data = obj.dependency_graph
     g = nx.DiGraph()
     for child_node, parents in graph_data.items():
         if isinstance(child_node, tuple):

@@ -31,4 +31,4 @@ if __name__ == "__main__":
     print(f"Result of Fib(2) {c.Calculate(2)}")  # cache works for Calculate(2), no more prints
     print(f"Result of Fib(1) {c.Calculate(1)}")  # cache works for Calculate(2), no more prints
     print(f"Result of Fib(4) {c.Calculate(4)}")  # calculates Calculate(4), rest cached
-    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
+    print(c.cached_values, c.dependency_graph, c.validation_state)

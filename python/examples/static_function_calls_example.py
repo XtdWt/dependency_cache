@@ -34,4 +34,4 @@ if __name__ == "__main__":
     print(f"Result of B {c.B()}")  # cache works for B, no more prints
     print(f"Result of A {c.A(0)}")
     print(f"Result of A {c.A(1)}")  # cache works for A, with args, no more prints
-    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
+    print(c.cached_values, c.dependency_graph, c.validation_state)

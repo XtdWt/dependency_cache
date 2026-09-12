@@ -57,4 +57,4 @@ if __name__ == "__main__":
     c.update_cached_value("B", False)
     print(c.A())  # calculates A, prints 3
 
-    print(c.get_cached_values(), c.get_dependency_graph(), c.get_validation_state())
+    print(c.cached_values, c.dependency_graph, c.validation_state)
