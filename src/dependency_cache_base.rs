@@ -12,7 +12,7 @@ use crate::py_introspection_utils::{normalise_function_signature_and_hash, valid
 use crate::decorator::DependencyCacheDecorator;
 
 
-#[pyclass]
+#[pyclass(subclass)]
 pub struct DependencyCacheBase {
     pub cache: HashMap<isize, Py<PyAny>>,
     pub method_dependency_graph: MethodDependencyGraph<isize, Py<PyTuple>>,
