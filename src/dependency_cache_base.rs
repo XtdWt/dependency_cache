@@ -89,6 +89,13 @@ impl DependencyCacheBase {
         }
         return None;
     }
+
+    fn create_hash(&self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> Option<isize> {
+        let empty_args = PyTuple::empty(py);
+        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
+        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
+        return Some(hash);
+    }
 }
 
 #[pymethods]
@@ -105,9 +112,7 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> Option<Py<PyAny>> {
-        let empty_args = PyTuple::empty(py);
-        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound).ok()?;
+        let hash = self.create_hash(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(hash) {
             self.cache.get(&hash).map(|obj| obj.clone_ref(py))
@@ -118,9 +123,8 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, value, **kwargs))]
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let empty_args = PyTuple::empty(py);
-        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
+        let maybe_hash = self.create_hash(py, &method_name, &kwargs);
+        let Some(hash) = maybe_hash else {
             return Ok(());
         };
 
@@ -142,9 +146,8 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let empty_args = PyTuple::empty(py);
-        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let Ok((hash, _)) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound) else {
+        let maybe_hash = self.create_hash(py, &method_name, &kwargs);
+        let Some(hash) = maybe_hash else {
             return Ok(());
         };
 
