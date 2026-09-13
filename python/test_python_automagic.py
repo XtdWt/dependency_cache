@@ -278,7 +278,7 @@ def test_plot_dependency_graph_raises():
     c = IncorrectInheritance()
 
     with pytest.raises(TypeError):
-        plot_dependency_graph(c)
+        plot_dependency_graph(c)  # ty: ignore testing raises error
 
 
 def test_function_calls():
