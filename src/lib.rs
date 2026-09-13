@@ -3,6 +3,7 @@ mod dependency_graph;
 mod dependency_cache_base;
 mod decorator_factory;
 mod py_introspection_utils;
+mod metadata_hash_manager;
 
 use pyo3::prelude::*;
 

@@ -4,12 +4,13 @@ use pyo3::types::{PyDict, PyTuple};
 
 use crate::dependency_cache_base::DependencyCacheBase;
 use crate::py_introspection_utils::normalise_function_signature_and_hash;
+// use crate::metadata_hash_manager::CacheKey;
 
-#[pyclass(frozen)]
+#[pyclass]
 pub struct DependencyCacheDecorator {
     pub func: Py<PyAny>,
     pub use_cache: bool,
-    pub dependencies: Vec<isize>,
+    pub dependencies: Vec<(isize, Py<PyTuple>)>,
     pub method_name: String,
     pub track_runtime_dependencies: bool,
     pub serialisable: bool,
@@ -41,7 +42,7 @@ impl DependencyCacheDecorator {
 
     #[pyo3(signature = (*args, **kwargs))]
     fn __call__(
-        &self,
+        &mut self,
         py: Python<'_>,
         args: Py<PyTuple>,
         kwargs: Option<Py<PyDict>>,
@@ -64,21 +65,33 @@ impl DependencyCacheDecorator {
         let func = self.func.bind(py);
         let (hash, metadata) = normalise_function_signature_and_hash(py, &self.method_name, Some(func), args, kwargs)?;
 
+        let key = base.borrow_mut().metadata_hash_manager.create_cache_key(py, hash, metadata.unbind())?;
+
         // 1. add/check child dependencies
-        base.borrow_mut().add_children_dependencies(hash, self.dependencies.clone(), metadata.unbind());
+        let mut dependency_keys = Vec::with_capacity(self.dependencies.len());
+        if self.dependencies.len() != 0 {
+            for (hash, metadata) in &self.dependencies {
+                let dependency_key = base.borrow_mut()
+                    .metadata_hash_manager
+                    .create_cache_key(py, *hash, metadata.clone_ref(py))?;
+                dependency_keys.push(dependency_key);
+            }
+        }
+        base.borrow_mut()
+            .add_children_dependencies(key, dependency_keys);
 
         // 2. add/check parent dependencies, push function stack
         let parent_status = base.borrow().current_call_stack_top();
         if let Some((parent, parent_use_runtime_deps)) = parent_status {
             if parent_use_runtime_deps {
-                base.borrow_mut().add_parent_dependency(parent, hash);
+                base.borrow_mut().add_parent_dependency(parent, key);
             }
         }
-        base.borrow_mut().push_call_stack(hash, self.track_runtime_dependencies);
+        base.borrow_mut().push_call_stack(key, self.track_runtime_dependencies);
 
         let outcome = (|| -> PyResult<Py<PyAny>> {
             // 3. check cache for value
-            let cached = base.borrow().get_cached_value_by_hash(py, hash);
+            let cached = base.borrow().get_cached_value_by_hash(py, key);
             if let Some(cached) = cached {
                 return Ok(cached);
             }
@@ -88,9 +101,9 @@ impl DependencyCacheDecorator {
 
             // 5. validate current, set cache and pop function stack
             base.borrow_mut()
-                .validate_current_method(hash, self.use_cache);
+                .validate_current_method(key, self.use_cache);
             base.borrow_mut()
-                .set_cached_value_by_hash(hash, result.clone_ref(py));
+                .set_cached_value_by_hash(key, result.clone_ref(py));
             Ok(result)
         })();
 
