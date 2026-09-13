@@ -22,10 +22,6 @@ impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
         };
     }
 
-    // pub fn get_metadata(&self, method: &T) -> Option<&M> {
-    //     return self.metadata_map.get(method);
-    // }
-
     pub fn get_method_state_as_enum(&self, method: &T) -> &ValidationState {
         return self.validation_state.get(method).unwrap_or(&ValidationState::PermanentlyInvalid);
     }
@@ -43,7 +39,6 @@ impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
             return ();
         }
         self.validation_state.insert(method.clone(), ValidationState::Invalid);
-        // self.metadata_map.insert(method.clone(), metadata);
         self.dependency_graph.entry(method.clone()).or_default();
         for dependent_method in dependencies {
             self.dependency_graph
@@ -152,11 +147,6 @@ impl<T: Eq + Hash + Clone> MethodDependencyGraph<T> {
             })
             .collect();
     }
-
-    // pub fn clone_metadata(&self) -> HashMap<T, M>
-    // where M: Clone {
-    //     return self.metadata_map.clone();
-    // }
 
     pub fn invalidate_all(&mut self) {
         for state in self.validation_state.values_mut() {
@@ -354,8 +344,6 @@ mod tests {
         metadata_store.insert("A".to_string(), "A".to_string());
         metadata_store.insert("B".to_string(), "B".to_string());
         metadata_store.insert("C".to_string(), "C".to_string());
-
-        // assert_eq!(dg.clone_metadata(), metadata_store);
     }
 
     #[test]

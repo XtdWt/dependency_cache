@@ -70,7 +70,6 @@ impl ManualDependencyCacheDecoratorFactory {
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
             serialisable: self.serialisable,
-            // dependencies_as_key: Vec::new(),
         });
     }
 }
@@ -141,7 +140,6 @@ impl AutomagicDependencyCacheDecoratorFactory {
             method_name,
             track_runtime_dependencies: self.track_runtime_dependencies,
             serialisable: self.serialisable,
-            // dependencies_as_key: Vec::new(),
         });
     }
 }

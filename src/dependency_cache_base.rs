@@ -175,7 +175,6 @@ impl DependencyCacheBase {
             let Some(bound) = self.metadata_hash_manager.get_signature(py, hash) else {
                 continue;
             };
-            // let bound = meta.bind(py);
 
             let func_name: String = bound.get_item(0)?.extract()?;
 
@@ -201,7 +200,6 @@ impl DependencyCacheBase {
             let Some(child_bound) = self.metadata_hash_manager.get_signature(py, child_hash) else {
                 continue;
             };
-            // let child_bound = child_meta.bind(py);
 
             let func_name: String = child_bound.get_item(0)?.extract()?;
 
@@ -217,7 +215,6 @@ impl DependencyCacheBase {
             let mut parent_bounds = Vec::new();
             for parent_hash in parent_hashes {
                 if let Some(bound) = self.metadata_hash_manager.get_signature(py, parent_hash) {
-                    // let bound = parent_meta.bind(py);
 
                     let parent_name: String = bound.get_item(0)?.extract()?;
                     let parent_args_item = bound.get_item(1)?;
@@ -246,7 +243,6 @@ impl DependencyCacheBase {
             let Some(meta_bound) = self.metadata_hash_manager.get_signature(py, hash) else {
                 continue;
             };
-            // let meta_bound = metadata.bind(py);
 
             let func_name: String = meta_bound.get_item(0)?.extract()?;
 

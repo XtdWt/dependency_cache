@@ -4,7 +4,6 @@ use pyo3::types::{PyDict, PyTuple};
 
 use crate::dependency_cache_base::DependencyCacheBase;
 use crate::py_introspection_utils::normalise_function_signature_and_hash;
-// use crate::metadata_hash_manager::CacheKey;
 
 #[pyclass]
 pub struct DependencyCacheDecorator {
