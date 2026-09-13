@@ -23,6 +23,8 @@ features = [
 lto = "fat"
 codegen-units = 1
 opt-level = 3
+strip = true
+panic = "abort"
 
 [lints.clippy]
 needless_return = "allow"
