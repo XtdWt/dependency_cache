@@ -101,7 +101,7 @@ This project is still a work in progress, with everything from API to underlying
 
 Current TODO list (in no particular order):
 - scenario analysis capability (add temporary cache to base)
-- add validation to static dependencies, ensure methods are of decorator class
-- improve plot_dependency_graph (maybe to GUI?) with moveable nodes
+- add validation to static dependencies, ensure methods are of decorator class (?)
+- improve plot_dependency_graph (maybe to GUI?) with interactive nodes
 - add object thread safety for python 3.14+
 - work out how best to handle nested objects
