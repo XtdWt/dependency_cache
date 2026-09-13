@@ -46,18 +46,18 @@ impl ManualDependencyCacheDecoratorFactory {
     fn __call__(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<DependencyCacheDecorator> {
         let method_name: String = func.getattr(py, "__name__")?.extract(py)?;
         let empty_args = PyTuple::empty(py);
-        let hashed_dependencies: Vec<isize> = self
+        let hashed_dependencies: Vec<(isize, Py<PyTuple>)> = self
             .dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_function_signature_and_hash(
+                let (hash, args) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,
                     &empty_args,
                     Some(kwargs.bind(py)),
                 )?;
-                Ok(hash)
+                Ok((hash, args.unbind()))
             })
             .collect::<PyResult<Vec<_>>>()?;
         if self.serialisable {
@@ -117,17 +117,17 @@ impl AutomagicDependencyCacheDecoratorFactory {
             }
             Some(deps) => deps,
         };
-        let hashed_dependencies: Vec<isize> = dependencies
+        let hashed_dependencies: Vec<(isize, Py<PyTuple>)> = dependencies
             .iter()
             .map(|(method_name, kwargs)| {
-                let (hash, _) = normalise_function_signature_and_hash(
+                let (hash, args) = normalise_function_signature_and_hash(
                     py,
                     method_name,
                     None,
                     &empty_args,
                     Some(kwargs.bind(py)),
                 )?;
-                Ok(hash)
+                Ok((hash, args.unbind()))
             })
             .collect::<PyResult<Vec<_>>>()?;
         if self.serialisable {

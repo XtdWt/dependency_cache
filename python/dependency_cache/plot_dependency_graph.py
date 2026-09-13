@@ -4,7 +4,7 @@ import networkx as nx
 from .dependency_cache import DependencyCacheBase
 
 
-def plot_dependency_graph(obj, **kwargs) -> None:
+def plot_dependency_graph(obj: DependencyCacheBase, **kwargs) -> None:
     if not isinstance(obj, DependencyCacheBase):
         raise TypeError("provided object must inherit from DependencyCacheBase")
     graph_data = obj.dependency_graph

@@ -10,30 +10,32 @@ use std::collections::{HashMap, HashSet};
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
 use crate::py_introspection_utils::{normalise_function_signature_and_hash, validate_self_only_method};
 use crate::decorator::DependencyCacheDecorator;
+use crate::metadata_hash_manager::{CacheKey, MetadataHashManager};
 
 
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
-    pub cache: HashMap<isize, Py<PyAny>>,
-    pub method_dependency_graph: MethodDependencyGraph<isize, Py<PyTuple>>,
-    pub call_stack: Vec<(isize, bool)>,
+    pub cache: HashMap<CacheKey, Py<PyAny>>,
+    pub method_dependency_graph: MethodDependencyGraph<CacheKey>,
+    pub metadata_hash_manager: MetadataHashManager,
+    pub call_stack: Vec<(CacheKey, bool)>,
 }
 
 impl DependencyCacheBase {
 
-    pub fn set_cached_value_by_hash(&mut self, hash: isize, value: Py<PyAny>) {
+    pub fn set_cached_value_by_hash(&mut self, hash: CacheKey, value: Py<PyAny>) {
         if !self.method_dependency_graph.is_valid(hash) {
             return ();
         }
         self.cache.insert(hash, value);
     }
 
-    pub fn validate_current_method(&mut self, hash: isize, use_cache: bool) {
+    pub fn validate_current_method(&mut self, hash: CacheKey, use_cache: bool) {
         if !use_cache {
             self.method_dependency_graph.permanently_invalidate(hash);
         }
 
-        let child_validation_states: Vec<isize> = self.method_dependency_graph.list_child_methods(&hash);
+        let child_validation_states: Vec<CacheKey> = self.method_dependency_graph.list_child_methods(&hash);
 
         let mut new_state = ValidationState::Valid;
 
@@ -61,11 +63,11 @@ impl DependencyCacheBase {
             }
         }
 
-    pub fn current_call_stack_top(&self) -> Option<(isize, bool)> {
+    pub fn current_call_stack_top(&self) -> Option<(CacheKey, bool)> {
         self.call_stack.last().cloned()
     }
 
-    pub fn push_call_stack(&mut self, hash: isize, add_parent_dependencies: bool) {
+    pub fn push_call_stack(&mut self, hash: CacheKey, add_parent_dependencies: bool) {
         self.call_stack.push((hash, add_parent_dependencies));
     }
 
@@ -73,28 +75,29 @@ impl DependencyCacheBase {
         self.call_stack.pop();
     }
 
-    pub fn add_parent_dependency(&mut self, hash: isize, dependency: isize) {
+    pub fn add_parent_dependency(&mut self, hash: CacheKey, dependency: CacheKey) {
         self.method_dependency_graph
             .add_parent_dependency(hash, vec![dependency]);
     }
 
-    pub fn add_children_dependencies(&mut self, hash: isize, dependency: Vec<isize>, metadata: Py<PyTuple>) {
+    pub fn add_children_dependencies(&mut self, hash: CacheKey, dependency: Vec<CacheKey>) {
         self.method_dependency_graph
-            .add_children_dependency(hash, dependency, metadata);
+            .add_children_dependency(hash, dependency);
     }
 
-    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: isize) -> Option<Py<PyAny>> {
+    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: CacheKey) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(hash) {
             return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
         }
         return None;
     }
 
-    fn create_hash(&self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<isize> {
+    pub fn create_hash(&mut self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, _) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
-        return Ok(hash);
+        let (hash, sig) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
+        let key = self.metadata_hash_manager.create_cache_key(py, hash, sig.unbind());
+        return key;
     }
 }
 
@@ -106,12 +109,13 @@ impl DependencyCacheBase {
         return Self {
             cache: HashMap::new(),
             method_dependency_graph: MethodDependencyGraph::new(),
+            metadata_hash_manager: MetadataHashManager::new(),
             call_stack: Vec::new(),
         };
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
-    pub fn get_cached_value(&self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
+    pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
         let hash = self.create_hash(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(hash) {
@@ -121,7 +125,7 @@ impl DependencyCacheBase {
     }
 
     pub fn is_cached(
-        &self,
+        &mut self,
         py: Python<'_>,
         method_name: String,
         kwargs: Option<Py<PyDict>>,
@@ -168,10 +172,9 @@ impl DependencyCacheBase {
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, value) in &self.cache {
-            let Some(meta) = self.method_dependency_graph.get_metadata(hash) else {
+            let Some(bound) = self.metadata_hash_manager.get_signature(py, hash) else {
                 continue;
             };
-            let bound = meta.bind(py);
 
             let func_name: String = bound.get_item(0)?.extract()?;
 
@@ -194,10 +197,9 @@ impl DependencyCacheBase {
         let dict = PyDict::new(py);
 
         for (child_hash, parent_hashes) in &self.method_dependency_graph.clone_graph() {
-            let Some(child_meta) = self.method_dependency_graph.get_metadata(child_hash) else {
+            let Some(child_bound) = self.metadata_hash_manager.get_signature(py, child_hash) else {
                 continue;
             };
-            let child_bound = child_meta.bind(py);
 
             let func_name: String = child_bound.get_item(0)?.extract()?;
 
@@ -212,8 +214,7 @@ impl DependencyCacheBase {
 
             let mut parent_bounds = Vec::new();
             for parent_hash in parent_hashes {
-                if let Some(parent_meta) = self.method_dependency_graph.get_metadata(parent_hash) {
-                    let bound = parent_meta.bind(py);
+                if let Some(bound) = self.metadata_hash_manager.get_signature(py, parent_hash) {
 
                     let parent_name: String = bound.get_item(0)?.extract()?;
                     let parent_args_item = bound.get_item(1)?;
@@ -239,10 +240,9 @@ impl DependencyCacheBase {
     pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
         for (hash, state) in &self.method_dependency_graph.clone_state() {
-            let Some(metadata) = self.method_dependency_graph.get_metadata(hash) else {
+            let Some(meta_bound) = self.metadata_hash_manager.get_signature(py, hash) else {
                 continue;
             };
-            let meta_bound = metadata.bind(py);
 
             let func_name: String = meta_bound.get_item(0)?.extract()?;
 
@@ -326,9 +326,8 @@ impl DependencyCacheBase {
         let class = slf.get_type();
 
         let load_method = |name: &str| -> PyResult<()> {
-            let loaded_value = match data.get_item(name)? {
-                Some(val) => val,
-                None => return Ok(()),
+            let Some(loaded_value) = data.get_item(name)? else {
+                return Ok(());
             };
 
             let method_attr = class.getattr(name)?;
@@ -341,26 +340,25 @@ impl DependencyCacheBase {
                         name
                     ))
                 })?;
+            // scope borrow to prevent already borrowed error
+            let underlying_func = {
+                let d = decorator.borrow();
+                if !d.serialisable {
+                    return Err(PyValueError::new_err(format!(
+                        "Method '{}' is not marked as serialisable",
+                        name
+                    )));
+                }
+                d.func.clone_ref(py)
+            };
 
-            let decorator_ref = decorator.borrow();
-
-
-            if !decorator_ref.serialisable {
-                return Err(PyValueError::new_err(format!(
-                    "Method '{}' is not marked as serialisable",
-                    name
-                )));
-            }
-
-            let underlying_func = decorator_ref.func.bind(py);
-            validate_self_only_method(py, &underlying_func)?;
+            validate_self_only_method(py, underlying_func.bind(py))?;
 
             let _ = slf.call_method(name, (), None)?;
 
-            let empty_args = PyTuple::empty(py);
-            let (hash, _) = normalise_function_signature_and_hash(py, name, None, &empty_args, None)
-                .map_err(|e| PyValueError::new_err(format!("Failed to hash '{}': {}", name, e)))?;
-            slf.borrow_mut().cache.insert(hash, loaded_value.unbind());
+            let mut base = slf.borrow_mut();
+            let key = base.create_hash(py, &name.to_string(), &None)?;
+            base.cache.insert(key, loaded_value.unbind());
             Ok(())
         };
 
