@@ -41,7 +41,7 @@ impl DependencyCacheDecorator {
 
     #[pyo3(signature = (*args, **kwargs))]
     fn __call__(
-        &mut self,
+        &self,
         py: Python<'_>,
         args: Py<PyTuple>,
         kwargs: Option<Py<PyDict>>,
