@@ -1,5 +1,7 @@
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+use pyo3::exceptions::PyKeyError;
+
 use std::collections::HashMap;
 
 pub type CacheKey = u64;
@@ -15,7 +17,7 @@ impl MetadataHashManager {
         Self { buckets: HashMap::new(), signatures: HashMap::new(), next_id: 0 }
     }
 
-    pub fn get_cache_key(
+    fn find_cache_key(
         &self,
         py: Python<'_>,
         hash: &isize,
@@ -24,18 +26,23 @@ impl MetadataHashManager {
         let Some(bucket) = self.buckets.get(hash) else {
             return Ok(None);
         };
-        if bucket.len() == 1 {
-            let key = bucket[0];
-            let stored = self.signatures[&key].bind(py);
-            return Ok(stored.eq(sig)?.then_some(key));
-        }
         for &key in bucket {
-            let stored = self.signatures[&key].bind(py);
-            if stored.eq(sig)? {
+            let stored_signature = self.signatures[&key].bind(py);
+            if stored_signature.eq(sig)? {
                 return Ok(Some(key));
             }
         }
         Ok(None)
+    }
+
+    pub fn get_cache_key(
+        &self,
+        py: Python<'_>,
+        hash: &isize,
+        sig: &Bound<'_, PyTuple>,
+    ) -> PyResult<CacheKey> {
+        self.find_cache_key(py, hash, sig)?
+            .ok_or_else(|| PyKeyError::new_err("No cache key found for provided signature"))
     }
 
     pub fn create_cache_key(
@@ -44,12 +51,12 @@ impl MetadataHashManager {
         hash: isize,
         sig: Py<PyTuple>,
     ) -> PyResult<CacheKey> {
-        if let Some(key) = self.get_cache_key(py, &hash, sig.bind(py))? {
+        if let Some(key) = self.find_cache_key(py, &hash, sig.bind(py))? {
             return Ok(key);
         }
         let key = self.next_id;
         self.next_id += 1;
-        self.buckets.entry(hash.clone()).or_default().push(key);
+        self.buckets.entry(hash).or_default().push(key);
         self.signatures.insert(key, sig);
         Ok(key)
     }

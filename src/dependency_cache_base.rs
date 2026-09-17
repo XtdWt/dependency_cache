@@ -23,19 +23,19 @@ pub struct DependencyCacheBase {
 
 impl DependencyCacheBase {
 
-    pub fn set_cached_value_by_hash(&mut self, hash: CacheKey, value: Py<PyAny>) {
-        if !self.method_dependency_graph.is_valid(hash) {
+    pub fn set_cached_value_by_key(&mut self, key: CacheKey, value: Py<PyAny>) {
+        if !self.method_dependency_graph.is_valid(key) {
             return ();
         }
-        self.cache.insert(hash, value);
+        self.cache.insert(key, value);
     }
 
-    pub fn validate_current_method(&mut self, hash: CacheKey, use_cache: bool) {
+    pub fn validate_current_method(&mut self, key: CacheKey, use_cache: bool) {
         if !use_cache {
-            self.method_dependency_graph.permanently_invalidate(hash);
+            self.method_dependency_graph.permanently_invalidate(key);
         }
 
-        let child_validation_states: Vec<CacheKey> = self.method_dependency_graph.list_child_methods(&hash);
+        let child_validation_states: Vec<CacheKey> = self.method_dependency_graph.list_child_methods(&key);
 
         let mut new_state = ValidationState::Valid;
 
@@ -52,13 +52,13 @@ impl DependencyCacheBase {
 
             match new_state {
                 ValidationState::PermanentlyInvalid => {
-                    self.method_dependency_graph.permanently_invalidate(hash);
+                    self.method_dependency_graph.permanently_invalidate(key);
                 }
                 ValidationState::Invalid => {
-                    self.method_dependency_graph.temporarily_invalidate(hash);
+                    self.method_dependency_graph.temporarily_invalidate(key);
                 }
                 ValidationState::Valid => {
-                    self.method_dependency_graph.validate(hash);
+                    self.method_dependency_graph.validate(key);
                 }
             }
         }
@@ -67,36 +67,44 @@ impl DependencyCacheBase {
         self.call_stack.last().cloned()
     }
 
-    pub fn push_call_stack(&mut self, hash: CacheKey, add_parent_dependencies: bool) {
-        self.call_stack.push((hash, add_parent_dependencies));
+    pub fn push_call_stack(&mut self, key: CacheKey, add_parent_dependencies: bool) {
+        self.call_stack.push((key, add_parent_dependencies));
     }
 
     pub fn pop_call_stack(&mut self) {
         self.call_stack.pop();
     }
 
-    pub fn add_parent_dependency(&mut self, hash: CacheKey, dependency: CacheKey) {
+    pub fn add_parent_dependency(&mut self, key: CacheKey, dependency: CacheKey) {
         self.method_dependency_graph
-            .add_parent_dependency(hash, vec![dependency]);
+            .add_parent_dependency(key, vec![dependency]);
     }
 
-    pub fn add_children_dependencies(&mut self, hash: CacheKey, dependency: Vec<CacheKey>) {
+    pub fn add_children_dependencies(&mut self, key: CacheKey, dependency: Vec<CacheKey>) {
         self.method_dependency_graph
-            .add_children_dependency(hash, dependency);
+            .add_children_dependency(key, dependency);
     }
 
-    pub fn get_cached_value_by_hash(&self, py: Python<'_>, hash: CacheKey) -> Option<Py<PyAny>> {
-        if self.method_dependency_graph.is_valid(hash) {
-            return self.cache.get(&hash).map(|obj| obj.clone_ref(py));
+    pub fn get_cached_value_by_key(&self, py: Python<'_>, key: CacheKey) -> Option<Py<PyAny>> {
+        if self.method_dependency_graph.is_valid(key) {
+            return self.cache.get(&key).map(|obj| obj.clone_ref(py));
         }
         return None;
     }
 
-    pub fn create_hash(&mut self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
+    pub fn create_key(&mut self, py: Python<'_>, method_name: &str, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, sig) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
+        let (hash, sig) = normalise_function_signature_and_hash(py, method_name, None, &empty_args, kwargs_bound)?;
         let key = self.metadata_hash_manager.create_cache_key(py, hash, sig.unbind());
+        return key;
+    }
+
+    pub fn get_key(&mut self, py: Python<'_>, method_name: &str, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
+        let empty_args = PyTuple::empty(py);
+        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
+        let (hash, sig) = normalise_function_signature_and_hash(py, method_name, None, &empty_args, kwargs_bound)?;
+        let key = self.metadata_hash_manager.get_cache_key(py, &hash, &sig);
         return key;
     }
 }
@@ -116,10 +124,10 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.method_dependency_graph.is_valid(hash) {
-            return Ok(self.cache.get(&hash).map(|obj| obj.clone_ref(py)));
+        if self.method_dependency_graph.is_valid(key) {
+            return Ok(self.cache.get(&key).map(|obj| obj.clone_ref(py)));
         }
         return Ok(None);
     }
@@ -130,23 +138,23 @@ impl DependencyCacheBase {
         method_name: String,
         kwargs: Option<Py<PyDict>>,
     ) -> PyResult<bool> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
-        Ok(self.method_dependency_graph.is_valid(hash) && self.cache.contains_key(&hash))
+        let key = self.get_key(py, &method_name, &kwargs)?;
+        Ok(self.method_dependency_graph.is_valid(key) && self.cache.contains_key(&key))
     }
 
 
     #[pyo3(signature = (method_name, value, **kwargs))]
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let key = self.get_key(py, &method_name, &kwargs)?;
 
-        let Some(v) = self.cache.get_mut(&hash) else {
+        let Some(v) = self.cache.get_mut(&key) else {
             return Err(PyKeyError::new_err(format!(
                 "Cannot update cached value for '{method_name}'"
             )));
         };
         *v = value;
-        self.method_dependency_graph.temporarily_invalidate(hash);
-        self.method_dependency_graph.validate(hash);
+        self.method_dependency_graph.temporarily_invalidate(key);
+        self.method_dependency_graph.validate(key);
         return Ok(());
     }
 
@@ -157,22 +165,22 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.cache.remove(&hash).is_none() {
+        if self.cache.remove(&key).is_none() {
             return Err(PyKeyError::new_err(format!(
                 "Cannot clear cached value for '{method_name}'"
             )));
         }
-        self.method_dependency_graph.temporarily_invalidate(hash);
+        self.method_dependency_graph.temporarily_invalidate(key);
         Ok(())
     }
 
     #[getter]
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (hash, value) in &self.cache {
-            let Some(bound) = self.metadata_hash_manager.get_signature(py, hash) else {
+        for (key, value) in &self.cache {
+            let Some(bound) = self.metadata_hash_manager.get_signature(py, key) else {
                 continue;
             };
 
@@ -196,8 +204,8 @@ impl DependencyCacheBase {
     pub fn get_dependency_graph<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
 
-        for (child_hash, parent_hashes) in &self.method_dependency_graph.clone_graph() {
-            let Some(child_bound) = self.metadata_hash_manager.get_signature(py, child_hash) else {
+        for (child_key, parent_keys) in &self.method_dependency_graph.clone_graph() {
+            let Some(child_bound) = self.metadata_hash_manager.get_signature(py, child_key) else {
                 continue;
             };
 
@@ -213,8 +221,8 @@ impl DependencyCacheBase {
             };
 
             let mut parent_bounds = Vec::new();
-            for parent_hash in parent_hashes {
-                if let Some(bound) = self.metadata_hash_manager.get_signature(py, parent_hash) {
+            for parent_key in parent_keys {
+                if let Some(bound) = self.metadata_hash_manager.get_signature(py, parent_key) {
 
                     let parent_name: String = bound.get_item(0)?.extract()?;
                     let parent_args_item = bound.get_item(1)?;
@@ -239,8 +247,8 @@ impl DependencyCacheBase {
     #[getter]
     pub fn get_validation_state<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (hash, state) in &self.method_dependency_graph.clone_state() {
-            let Some(meta_bound) = self.metadata_hash_manager.get_signature(py, hash) else {
+        for (key, state) in &self.method_dependency_graph.clone_state() {
+            let Some(meta_bound) = self.metadata_hash_manager.get_signature(py, key) else {
                 continue;
             };
 
@@ -357,7 +365,7 @@ impl DependencyCacheBase {
             let _ = slf.call_method(name, (), None)?;
 
             let mut base = slf.borrow_mut();
-            let key = base.create_hash(py, &name.to_string(), &None)?;
+            let key = base.create_key(py, name, &None)?;
             base.cache.insert(key, loaded_value.unbind());
             Ok(())
         };
