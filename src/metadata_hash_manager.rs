@@ -42,7 +42,7 @@ impl MetadataHashManager {
         sig: &Bound<'_, PyTuple>,
     ) -> PyResult<CacheKey> {
         self.find_cache_key(py, hash, sig)?
-            .ok_or_else(|| PyKeyError::new_err("no cache key found for provided signature"))
+            .ok_or_else(|| PyKeyError::new_err("No cache key found for provided signature"))
     }
 
     pub fn create_cache_key(

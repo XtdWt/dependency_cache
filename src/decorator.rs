@@ -18,7 +18,7 @@ pub struct DependencyCacheDecorator {
 #[pymethods]
 impl DependencyCacheDecorator {
     fn __set__(&self, _obj: Py<PyAny>, _value: Py<PyAny>) -> PyResult<()> {
-        return Err(PyTypeError::new_err("cannot assign to decorated method"));
+        return Err(PyTypeError::new_err("Cannot assign to decorated method"));
     }
 
     fn __get__(
@@ -57,14 +57,14 @@ impl DependencyCacheDecorator {
         let instance = args.get_item(0)?;
         let base = instance.cast::<DependencyCacheBase>().map_err(|_| {
             PyTypeError::new_err(
-                "the decorated method's class must inherit from DependencyCacheBase",
+                "The decorated method's class must inherit from DependencyCacheBase",
             )
         })?;
 
         let func = self.func.bind(py);
         let (hash, metadata) = normalise_function_signature_and_hash(py, &self.method_name, Some(func), args, kwargs)?;
 
-        let key = base.borrow_mut().metadata_hash_manager.create_cache_key(py, hash, metadata.unbind())?;
+        let key = base.try_borrow_mut()?.metadata_hash_manager.create_cache_key(py, hash, metadata.unbind())?;
 
         // 1. add/check child dependencies
         let mut dependency_keys = Vec::with_capacity(self.dependencies.len());
@@ -90,7 +90,7 @@ impl DependencyCacheDecorator {
 
         let outcome = (|| -> PyResult<Py<PyAny>> {
             // 3. check cache for value
-            let cached = base.borrow().get_cached_value_by_hash(py, key);
+            let cached = base.borrow().get_cached_value_by_key(py, key);
             if let Some(cached) = cached {
                 return Ok(cached);
             }
@@ -102,7 +102,7 @@ impl DependencyCacheDecorator {
             base.borrow_mut()
                 .validate_current_method(key, self.use_cache);
             base.borrow_mut()
-                .set_cached_value_by_hash(key, result.clone_ref(py));
+                .set_cached_value_by_key(key, result.clone_ref(py));
             Ok(result)
         })();
 

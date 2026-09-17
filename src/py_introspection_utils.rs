@@ -182,7 +182,7 @@ pub fn ast_inspect_method_dependencies(py: Python<'_>, python_func: &Py<PyAny>) 
     let ast_module = PyModule::import(py, "ast")?;
     let ast_tree = ast_module
         .call_method1("parse", (function_string_clean,))
-        .map_err(|e| PyValueError::new_err(format!("failed to parse source: {e}")))?;
+        .map_err(|e| PyValueError::new_err(format!("Failed to parse source: {e}")))?;
 
     let ast_function = ast_module.getattr("FunctionDef")?;
     let ast_async_function = ast_module.getattr("AsyncFunctionDef")?;
