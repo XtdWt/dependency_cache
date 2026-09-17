@@ -68,7 +68,7 @@ impl DependencyCacheDecorator {
 
         // 1. add/check child dependencies
         let mut dependency_keys = Vec::with_capacity(self.dependencies.len());
-        if self.dependencies.len() != 0 {
+        if !self.dependencies.is_empty() {
             for (hash, metadata) in &self.dependencies {
                 let dependency_key = base.borrow_mut()
                     .metadata_hash_manager

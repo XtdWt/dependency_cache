@@ -92,11 +92,19 @@ impl DependencyCacheBase {
         return None;
     }
 
-    pub fn create_hash(&mut self, py: Python<'_>, method_name: &String, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
+    pub fn create_key(&mut self, py: Python<'_>, method_name: &str, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
         let empty_args = PyTuple::empty(py);
         let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
-        let (hash, sig) = normalise_function_signature_and_hash(py, &method_name, None, &empty_args, kwargs_bound)?;
+        let (hash, sig) = normalise_function_signature_and_hash(py, method_name, None, &empty_args, kwargs_bound)?;
         let key = self.metadata_hash_manager.create_cache_key(py, hash, sig.unbind());
+        return key;
+    }
+
+    pub fn get_key(&mut self, py: Python<'_>, method_name: &str, kwargs: &Option<Py<PyDict>>) -> PyResult<CacheKey> {
+        let empty_args = PyTuple::empty(py);
+        let kwargs_bound = kwargs.as_ref().map(|k| k.bind(py));
+        let (hash, sig) = normalise_function_signature_and_hash(py, method_name, None, &empty_args, kwargs_bound)?;
+        let key = self.metadata_hash_manager.get_cache_key(py, &hash, &sig);
         return key;
     }
 }
@@ -116,7 +124,7 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let hash = self.get_key(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(hash) {
             return Ok(self.cache.get(&hash).map(|obj| obj.clone_ref(py)));
@@ -130,23 +138,23 @@ impl DependencyCacheBase {
         method_name: String,
         kwargs: Option<Py<PyDict>>,
     ) -> PyResult<bool> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
-        Ok(self.method_dependency_graph.is_valid(hash) && self.cache.contains_key(&hash))
+        let key = self.get_key(py, &method_name, &kwargs)?;
+        Ok(self.method_dependency_graph.is_valid(key) && self.cache.contains_key(&key))
     }
 
 
     #[pyo3(signature = (method_name, value, **kwargs))]
     pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let key = self.get_key(py, &method_name, &kwargs)?;
 
-        let Some(v) = self.cache.get_mut(&hash) else {
+        let Some(v) = self.cache.get_mut(&key) else {
             return Err(PyKeyError::new_err(format!(
                 "Cannot update cached value for '{method_name}'"
             )));
         };
         *v = value;
-        self.method_dependency_graph.temporarily_invalidate(hash);
-        self.method_dependency_graph.validate(hash);
+        self.method_dependency_graph.temporarily_invalidate(key);
+        self.method_dependency_graph.validate(key);
         return Ok(());
     }
 
@@ -157,14 +165,14 @@ impl DependencyCacheBase {
 
     #[pyo3(signature = (method_name, **kwargs))]
     pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
-        let hash = self.create_hash(py, &method_name, &kwargs)?;
+        let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.cache.remove(&hash).is_none() {
+        if self.cache.remove(&key).is_none() {
             return Err(PyKeyError::new_err(format!(
                 "Cannot clear cached value for '{method_name}'"
             )));
         }
-        self.method_dependency_graph.temporarily_invalidate(hash);
+        self.method_dependency_graph.temporarily_invalidate(key);
         Ok(())
     }
 
@@ -357,7 +365,7 @@ impl DependencyCacheBase {
             let _ = slf.call_method(name, (), None)?;
 
             let mut base = slf.borrow_mut();
-            let key = base.create_hash(py, &name.to_string(), &None)?;
+            let key = base.create_key(py, name, &None)?;
             base.cache.insert(key, loaded_value.unbind());
             Ok(())
         };
