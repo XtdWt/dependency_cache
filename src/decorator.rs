@@ -64,6 +64,7 @@ impl DependencyCacheDecorator {
         let func = self.func.bind(py);
         let (hash, metadata) = normalise_function_signature_and_hash(py, &self.method_name, Some(func), args, kwargs)?;
 
+        // objects cannot pass themselves as an argument as the cache will trigger already borrowed error
         let key = base.try_borrow_mut()?.metadata_hash_manager.create_cache_key(py, hash, metadata.unbind())?;
 
         // 1. add/check child dependencies

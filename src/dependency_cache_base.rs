@@ -122,16 +122,25 @@ impl DependencyCacheBase {
         };
     }
 
-    #[pyo3(signature = (method_name, **kwargs))]
-    pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
+    #[pyo3(signature = (method_name, strict=true, **kwargs))]
+    pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, strict: bool, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
         if self.method_dependency_graph.is_valid(key) {
-            return Ok(self.cache.get(&key).map(|obj| obj.clone_ref(py)));
+            if let Some(obj) = self.cache.get(&key) {
+                return Ok(Some(obj.clone_ref(py)));
+            }
         }
+
+        if strict {
+            return Err(PyKeyError::new_err(format!(
+                "Cannot get cached value for '{method_name}'"
+            )));
+        };
         return Ok(None);
     }
 
+    #[pyo3(signature = (method_name, **kwargs))]
     pub fn is_cached(
         &mut self,
         py: Python<'_>,
