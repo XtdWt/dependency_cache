@@ -139,6 +139,12 @@ class SerialisableObj(DependencyCacheBase):
         return None
 
 
+class NonesObj(DependencyCacheBase):
+    @dependency_cached()
+    def A(self):
+        return None
+
+
 def test_raises_typeerror():
     with pytest.raises(TypeError):
         c = IncorrectInheritance()
@@ -345,3 +351,25 @@ def test_serialising_data(data, result):
     assert obj.C() is not None
 
     assert obj.C() == result
+
+
+def test_strict_get_raises():
+    obj = NonesObj()
+
+    with pytest.raises(KeyError):
+        obj.get_cached_value("A")
+
+    assert obj.A() is None
+
+    assert obj.is_cached("A") is True
+
+    assert obj.get_cached_value("A") is None
+
+    obj.clear_cached_value("A")
+
+    assert obj.is_cached("A") is False
+
+    with pytest.raises(KeyError):
+        obj.get_cached_value("A")
+
+    assert obj.get_cached_value("A", strict=False) is None
