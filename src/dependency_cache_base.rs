@@ -1,6 +1,6 @@
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple, PyString, PySet, PyType};
-use pyo3::exceptions::{PyValueError, PyKeyError};
+use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyValueError};
 
 use rand::rng;
 use rand::seq::SliceRandom;
@@ -19,6 +19,7 @@ pub struct DependencyCacheBase {
     pub method_dependency_graph: MethodDependencyGraph<CacheKey>,
     pub metadata_hash_manager: MetadataHashManager,
     pub call_stack: Vec<(CacheKey, bool)>,
+    pub cache_stack: Vec<HashMap<CacheKey, Py<PyAny>>>,
 }
 
 impl DependencyCacheBase {
@@ -27,7 +28,11 @@ impl DependencyCacheBase {
         if !self.method_dependency_graph.is_valid(key) {
             return ();
         }
-        self.cache.insert(key, value);
+        if let Some(top) = self.cache_stack.last_mut() {
+            top.insert(key, value);
+        } else {
+            self.cache.insert(key, value);
+        };
     }
 
     pub fn validate_current_method(&mut self, key: CacheKey, use_cache: bool) {
@@ -87,6 +92,9 @@ impl DependencyCacheBase {
 
     pub fn get_cached_value_by_key(&self, py: Python<'_>, key: CacheKey) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(key) {
+            if let Some(temp_cache_value) = self.get_from_temporary_cache(py, &key) {
+                return Some(temp_cache_value);
+            }
             return self.cache.get(&key).map(|obj| obj.clone_ref(py));
         }
         return None;
@@ -107,6 +115,24 @@ impl DependencyCacheBase {
         let key = self.metadata_hash_manager.get_cache_key(py, &hash, &sig);
         return key;
     }
+
+    pub fn push_cache_stack(mut self) {
+        return self.cache_stack.push(HashMap::new());
+    }
+
+    pub fn pop_cache_stack(mut self) -> PyResult<()> {
+        self.cache_stack.pop().ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
+        return Ok(());
+    }
+
+    pub fn get_from_temporary_cache(&self, py: Python<'_>, key: &CacheKey) -> Option<Py<PyAny>> {
+        for layer in self.cache_stack.iter().rev() {
+            if let Some(v) = layer.get(key) {
+                return Some(v.clone_ref(py));
+            }
+        }
+        return None;
+    }
 }
 
 #[pymethods]
@@ -119,6 +145,7 @@ impl DependencyCacheBase {
             method_dependency_graph: MethodDependencyGraph::new(),
             metadata_hash_manager: MetadataHashManager::new(),
             call_stack: Vec::new(),
+            cache_stack: Vec::new(),
         };
     }
 
