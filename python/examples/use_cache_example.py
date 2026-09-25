@@ -4,9 +4,6 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 
 class UseCacheExample(DependencyCacheBase):
-    def __init__(self):
-        super().__init__()
-
     @dependency_cached(use_cache=False)
     def A(self):
         print("calculating A")

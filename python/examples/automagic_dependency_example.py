@@ -3,14 +3,13 @@ from dependency_cache import DependencyCacheBase, automagically_dependency_cache
 
 class ExampleCalculationMagic(DependencyCacheBase):
     """  E
-       //  \\
-       D    \\
-    //  \\   \\
-    A    B    C
+        / \
+       D   \
+     /  \   \
+    A    B   C
     """
 
     def __init__(self, x, y, z):
-        super().__init__()
         self.x = x
         self.y = y
         self.z = z

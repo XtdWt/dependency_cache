@@ -3,9 +3,6 @@ from dependency_cache import DependencyCacheBase, dependency_cached, plot_depend
 
 
 class IncorrectInheritance:
-    def __init__(self):
-        pass
-
     @dependency_cached()
     def A(self):
         return 1
@@ -13,7 +10,6 @@ class IncorrectInheritance:
 
 class SimpleTestObj(DependencyCacheBase):
     def __init__(self, x, y):
-        super().__init__()
         self.x = x
         self.y = y
 
@@ -32,7 +28,6 @@ class SimpleTestObj(DependencyCacheBase):
 
 class HardTestObj(DependencyCacheBase):
     def __init__(self, x, y):
-        super().__init__()
         self.x = x
         self.y = y
 
@@ -59,7 +54,6 @@ class HardTestObj(DependencyCacheBase):
 
 class HarderTestObj(DependencyCacheBase):
     def __init__(self, x, y):
-        super().__init__()
         self.x = x
         self.y = y
 
@@ -90,7 +84,6 @@ class HarderTestObj(DependencyCacheBase):
 
 class UseCacheObj(DependencyCacheBase):
     def __init__(self, x):
-        super().__init__()
         self.x = x
 
     @dependency_cached(use_cache=False)
@@ -105,7 +98,6 @@ class UseCacheObj(DependencyCacheBase):
 
 class FunctionCallObj(DependencyCacheBase):
     def __init__(self, x):
-        super().__init__()
         self.x = x
 
     @dependency_cached()
@@ -155,9 +147,6 @@ def test_incorrect_method_raises_valueerror():
     with pytest.raises(TypeError):
 
         class IncorrectMethod(DependencyCacheBase):
-            def __init__(self):
-                super().__init__()
-
             @dependency_cached()
             def A():
                 return 1
@@ -322,9 +311,6 @@ def test_incorrect_decorator_format():
     with pytest.raises(ValueError):
 
         class IncorrectDependencyType(DependencyCacheBase):
-            def __init__(self):
-                pass
-
             @dependency_cached(dependencies=[3, ("B", [1])])
             def A(self):
                 return 1

@@ -3,7 +3,6 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 class FunctionCallObj(DependencyCacheBase):
     def __init__(self, x):
-        super().__init__()
         self.x = x
 
     @dependency_cached(dependencies=["C"])

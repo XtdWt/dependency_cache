@@ -2,9 +2,6 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 
 class FibonacciExample(DependencyCacheBase):
-    def __init__(self):
-        super().__init__()
-
     @dependency_cached(track_runtime_dependencies=True)
     def Calculate(self, n):
         print(f"calculating the {n=} fibonacci number")

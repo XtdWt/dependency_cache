@@ -2,10 +2,10 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 
 class RuntimeGraphExample(DependencyCacheBase):
-    """    A
-        // | \\
-       //  |  \\
-      C    B    D (detached until B changes)
+    """   A
+        / | \
+       /  |  \
+      C   B   D (detached until B changes)
     """
 
     @dependency_cached(track_runtime_dependencies=True)

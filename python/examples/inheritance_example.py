@@ -2,9 +2,6 @@ from dependency_cache import DependencyCacheBase, automagically_dependency_cache
 
 
 class ChildClass(DependencyCacheBase):
-    def __init__(self):
-        super().__init__()
-
     @automagically_dependency_cached()
     def A(self):
         print("Calculating A from Child")
@@ -17,9 +14,6 @@ class ChildClass(DependencyCacheBase):
 
 
 class ParentClass(ChildClass):
-    def __init__(self):
-        super().__init__()
-
     @automagically_dependency_cached()
     def A(self):
         print("Calculating A from Parent")
