@@ -19,8 +19,8 @@ pip install dependency-cache
 |---|---|
 | `DependencyCacheBase` | Base class to inherit from. Gives your instance a cache and a dependency graph. |
 | `dependency_cached` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
-| `automagically_dependency_cached` | A decorator which **automagically infers** the direct dependencies |
-| `plot_dependency_graph(obj, **kwargs)` | Visualizes an instance's dependency graph, for inspection/debugging. |
+| `automagically_dependency_cached` | A decorator which **automagically infers** the direct dependencies. |
+| `plot_dependency_graph` | Visualizes an instance's dependency graph, for inspection or debugging. |
 
 All decorators accept optional parameters like use_cache, dependencies, track_runtime_dependencies, and serialisable. For exact signatures and types, see the
 [generated stubs file](https://github.com/XtdWt/dependency_cache/blob/master/python/dependency_cache/dependency_cache.pyi).
