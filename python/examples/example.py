@@ -3,8 +3,8 @@ from dependency_cache import DependencyCacheBase, automagically_dependency_cache
 
 class ExampleCalculation(DependencyCacheBase):
     """   C
-        //  \\
-       A      B
+        /   \
+       A     B
     """
 
     def __init__(self, x, y):
@@ -37,6 +37,6 @@ if __name__ == "__main__":
     print(f"Result of C = {c.C()}")  # calculates all, prints 8
     print(f"cache={c.cached_values} graph={c.dependency_graph} validation={c.validation_state}")
     print(f"Result of C = {c.C()}")  # hits cache, prints 8
-    c.update_cached_value("A", 0)  # invalidates C
+    c.update_cached_value("A", 0)  # updates A, then invalidates C
     print(f"Result of C = {c.C()}")  # recalculates C returns 5
     print(f"cache={c.cached_values} graph={c.dependency_graph} validation={c.validation_state}")

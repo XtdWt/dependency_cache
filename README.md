@@ -18,9 +18,12 @@ pip install dependency-cache
 | Export | What it's for |
 |---|---|
 | `DependencyCacheBase` | Base class to inherit from. Gives your instance a cache and a dependency graph. |
-| `dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=False, serialisable=False)` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
-| `automagically_dependency_cached(use_cache=True, dependencies=[...], track_runtime_dependencies=True, serialisable=False)` | A decorator which **automagically infers** the direct dependencies. Optionally override the defaults and inference using the `dependencies` parameter. |
+| `dependency_cached` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
+| `automagically_dependency_cached` | A decorator which **automagically infers** the direct dependencies |
 | `plot_dependency_graph(obj, **kwargs)` | Visualizes an instance's dependency graph, for inspection/debugging. |
+
+All decorators accept optional parameters like use_cache, dependencies, track_runtime_dependencies, and serialisable. For exact signatures and types, see the
+[generated stubs file](https://github.com/XtdWt/dependency_cache/blob/master/python/dependency_cache/dependency_cache.pyi).
 
 ### Setup
 This project uses (and requires) [uv](https://github.com/astral-sh/uv) as a package manager and maturin to compile.
@@ -57,8 +60,8 @@ from dependency_cache import DependencyCacheBase, automagically_dependency_cache
 
 class ExampleCalculation(DependencyCacheBase):
     """   C
-        //  \\
-       A      B
+        /   \
+       A     B
     """
 
     def __init__(self, x, y):
@@ -82,14 +85,14 @@ class ExampleCalculation(DependencyCacheBase):
 
 
 c = ExampleCalculation(3, 5)
-print(c.C())  # calculates A, B, C -> 8
-print(c.C())  # hits cache -> 8
+print(f"Result of C = {c.C()}")  # calculates all, prints 8
+print(f"Result of C = {c.C()}")  # hits cache, prints 8
 
-c.update_cached_value("A", 0)  # invalidates C (but not B)
-print(c.C())  # recalculates C -> 5
+c.update_cached_value("A", 0)  # updates A, then invalidates C
+print(f"Result of C = {c.C()}")  # recalculates C returns 5
 ```
 
-This example can be found [here](https://github.com/XtdWt/dependency_cache/blob/master/python/examples/example.py) with more runnable examples and use cases provided in the [python/examples](https://github.com/XtdWt/dependency_cache/tree/master/python/examples) folder.
+This example can be found at [python/examples/example.py](https://github.com/XtdWt/dependency_cache/blob/master/python/examples/example.py) with more runnable examples and use cases provided in the [python/examples](https://github.com/XtdWt/dependency_cache/tree/master/python/examples) folder.
 
 ```bash
 uv run ./python/examples/example.py

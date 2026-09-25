@@ -3,10 +3,10 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 class ExampleCalculationManual(DependencyCacheBase):
     """D     E
-        \\  //
+        \   /
           C
-        //  \\
-       A      B
+        /   \
+       A     B
     """
 
     def __init__(self, x, y):
