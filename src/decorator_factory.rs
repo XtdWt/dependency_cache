@@ -85,7 +85,7 @@ pub struct AutomagicDependencyCacheDecoratorFactory {
 #[pymethods]
 impl AutomagicDependencyCacheDecoratorFactory {
     #[new]
-    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=true, serialisable=false))]
+    #[pyo3(signature = (use_cache=true, dependencies=None, track_runtime_dependencies=false, serialisable=false))]
     fn new(
         py: Python<'_>,
         use_cache: bool,

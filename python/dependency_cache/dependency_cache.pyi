@@ -29,7 +29,7 @@ class automagically_dependency_cached:
         /,
         use_cache: bool = True,
         dependencies: Any | None = None,
-        track_runtime_dependencies: bool = True,
+        track_runtime_dependencies: bool = False,
         serialisable: bool = False,
     ) -> automagically_dependency_cached: ...
 
