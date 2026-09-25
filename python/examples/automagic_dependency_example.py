@@ -10,7 +10,6 @@ class ExampleCalculationMagic(DependencyCacheBase):
     """
 
     def __init__(self, x, y, z):
-        super().__init__()
         self.x = x
         self.y = y
         self.z = z
