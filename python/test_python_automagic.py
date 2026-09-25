@@ -105,7 +105,7 @@ class FunctionCallObj(DependencyCacheBase):
         print("calculating A!")
         return x + self.x
 
-    @automagically_dependency_cached()
+    @automagically_dependency_cached(track_runtime_dependencies=True)
     def B(self):
         total = 0
         for i in range(2):
