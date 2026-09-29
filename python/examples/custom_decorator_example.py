@@ -7,6 +7,7 @@ from dependency_cache import DependencyCacheBase, dependency_cached
 
 def custom_decorator(func):
     code = inspect.getsource(func)
+    # NOTE: this regex parsing is simply an example and NOT in any way recommended
     dependencies = re.findall(r'self\.([A-Za-z_]\w*)\(\)', code)
     @dependency_cached(dependencies=dependencies)
     @functools.wraps(func)
