@@ -21,11 +21,11 @@ class SerialisableCalculation(DependencyCacheBase):
 
 if __name__ == "__main__":
     obj1 = SerialisableCalculation()
-    print(obj1.C())
+    print(f"Result of C = {obj1.C()}")  # calculates all, prints 2
 
-    saved_state = obj1.dump_cache()
-    print(saved_state)
+    saved_state = obj1.dump_cache()  # serialises the cache
+    print(f"{saved_state=}")
 
     obj2 = SerialisableCalculation()
-    obj2.load_cache(saved_state)
-    print(obj2.C())
+    obj2.load_cache(saved_state)  # deserialises the cache
+    print(f"Result of C = {obj2.C()}")  # prints 2, cached value is reused
