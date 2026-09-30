@@ -4,24 +4,24 @@ from dependency_cache import DependencyCacheBase, automagically_dependency_cache
 class ChildClass(DependencyCacheBase):
     @automagically_dependency_cached()
     def A(self):
-        print("Calculating A from Child")
+        print("calculating A from Child")
         return 1
 
     @automagically_dependency_cached()
     def B(self):
-        print("Calculating B from Child")
+        print("calculating B from Child")
         return 3
 
 
 class ParentClass(ChildClass):
     @automagically_dependency_cached()
     def A(self):
-        print("Calculating A from Parent")
+        print("calculating A from Parent")
         return 2
 
     @automagically_dependency_cached()
     def B(self):
-        print("Calculating B from Parent")
+        print("calculating B from Parent")
         return super().B()
 
 

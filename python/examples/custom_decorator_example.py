@@ -20,17 +20,17 @@ class MultipleDecorators(DependencyCacheBase):
 
     @dependency_cached()
     def A(self):
-        print("Calculating A")
+        print("calculating A")
         return 1
 
     @dependency_cached()
     def B(self):
-        print("Calculating B")
+        print("calculating B")
         return 2
 
     @custom_decorator
     def C(self):
-        print("Calculating C")
+        print("calculating C")
         return self.A() + self.B()
 
 
