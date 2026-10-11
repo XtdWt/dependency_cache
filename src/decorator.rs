@@ -21,6 +21,16 @@ impl DependencyCacheDecorator {
         return Err(PyTypeError::new_err("Cannot assign to decorated method"));
     }
 
+    #[getter]
+    fn __name__(&self) -> &str {
+        &self.method_name
+    }
+
+    #[getter]
+    fn __qualname__(&self) -> &str {
+        &self.method_name
+    }
+
     fn __get__(
         slf: &Bound<'_, Self>,
         obj: Bound<'_, PyAny>,
