@@ -375,21 +375,29 @@ def test_strict_get_raises():
     assert obj.get_cached_value("A", strict=False) is None
 
 
-def test_custom_scenario():
-    obj = SimpleTestObj(1, 2)
+@pytest.mark.parametrize(
+    ("x", "y"),
+    [
+        (1, 2),
+        (100.1, 200.2),
+        (-55, -101),
+    ],
+)
+def test_custom_scenario(x, y):
+    obj = SimpleTestObj(x, y)
 
-    assert obj.C() == 3
+    assert obj.C() == x + y
 
     with custom_scenario([obj]):
-        obj.update_cached_value("A", 100)
+        obj.update_cached_value("A", x * 10)
 
-        assert obj.C() == 102
+        assert obj.C() == x * 10 + y
 
         with custom_scenario([obj]):
-            obj.update_cached_value("B", 3000)
+            obj.update_cached_value("B", y + 3000)
 
-            assert obj.C() == 3100
+            assert obj.C() == x * 10 + (y + 3000)
 
-        assert obj.C() == 102
+        assert obj.C() == x * 10 + y
 
-    assert obj.C() == 3
+    assert obj.C() == x + y
