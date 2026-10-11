@@ -20,13 +20,13 @@ impl Scenario {
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "The decorated method's class must inherit from DependencyCacheBase",
+                            "custom_scenario() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().push_cache_stack();
             }
         }
-        Ok(slf.clone().into_any())
+        return Ok(slf.clone().into_any());
     }
 
     fn __exit__<'py>(
@@ -44,18 +44,18 @@ impl Scenario {
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "The decorated method's class must inherit from DependencyCacheBase",
+                            "custom_scenario() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().pop_cache_stack()?;
             }
         }
-        Ok(false)
+        return Ok(false);
     }
 }
 
 
 #[pyfunction]
 pub fn custom_scenario(items: Vec<Py<PyAny>>) -> PyResult<Scenario> {
-    Ok(Scenario { items })
+    return Ok(Scenario { items });
 }

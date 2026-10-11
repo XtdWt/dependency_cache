@@ -9,6 +9,8 @@ pub enum ValidationState {
     PermanentlyInvalid,
 }
 
+
+#[derive(Clone)]
 pub struct MethodDependencyGraph<T> {
     validation_state: HashMap<T, ValidationState>,
     dependency_graph: HashMap<T, HashSet<T>>,  // maps child_name to set[parents_name], for ease of traversal

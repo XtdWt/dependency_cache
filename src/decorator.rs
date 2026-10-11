@@ -23,12 +23,12 @@ impl DependencyCacheDecorator {
 
     #[getter]
     fn __name__(&self) -> &str {
-        &self.method_name
+        return &self.method_name;
     }
 
     #[getter]
     fn __qualname__(&self) -> &str {
-        &self.method_name
+        return &self.method_name;
     }
 
     fn __get__(

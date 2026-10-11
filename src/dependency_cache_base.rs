@@ -13,13 +13,19 @@ use crate::decorator::DependencyCacheDecorator;
 use crate::metadata_hash_manager::{CacheKey, MetadataHashManager};
 
 
+pub struct CacheLayer {
+    pub cache: HashMap<CacheKey, Py<PyAny>>,
+    pub graph_snapshot: MethodDependencyGraph<CacheKey>,  //TODO: maybe less expensive way to handling graph snapshot...
+}
+
+
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
     pub cache: HashMap<CacheKey, Py<PyAny>>,
     pub method_dependency_graph: MethodDependencyGraph<CacheKey>,
     pub metadata_hash_manager: MetadataHashManager,
     pub call_stack: Vec<(CacheKey, bool)>,
-    pub cache_stack: Vec<HashMap<CacheKey, Py<PyAny>>>,
+    pub cache_stack: Vec<CacheLayer>,
 }
 
 impl DependencyCacheBase {
@@ -28,8 +34,8 @@ impl DependencyCacheBase {
         if !self.method_dependency_graph.is_valid(key) {
             return ();
         }
-        if let Some(top) = self.cache_stack.last_mut() {
-            top.insert(key, value);
+        if let Some(layer) = self.cache_stack.last_mut() {
+            layer.cache.insert(key, value);
         } else {
             self.cache.insert(key, value);
         };
@@ -69,7 +75,7 @@ impl DependencyCacheBase {
         }
 
     pub fn current_call_stack_top(&self) -> Option<(CacheKey, bool)> {
-        self.call_stack.last().cloned()
+        return self.call_stack.last().cloned();
     }
 
     pub fn push_call_stack(&mut self, key: CacheKey, add_parent_dependencies: bool) {
@@ -117,20 +123,25 @@ impl DependencyCacheBase {
     }
 
     pub fn push_cache_stack(&mut self) {
-        return self.cache_stack.push(HashMap::new());
+        return self.cache_stack.push(CacheLayer {
+                cache: HashMap::new(),
+                graph_snapshot: self.method_dependency_graph.clone(),
+            });
     }
 
     pub fn pop_cache_stack(&mut self) -> PyResult<()> {
-        let cache_layer = self.cache_stack.pop().ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
-        for (key, _) in cache_layer {
-            self.method_dependency_graph.temporarily_invalidate(key);
-        }
+        let layer = self
+            .cache_stack
+            .pop()
+            .ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
+
+        self.method_dependency_graph = layer.graph_snapshot;
         return Ok(());
     }
 
     pub fn get_from_temporary_cache(&self, py: Python<'_>, key: &CacheKey) -> Option<Py<PyAny>> {
         for layer in self.cache_stack.iter().rev() {
-            if let Some(v) = layer.get(key) {
+            if let Some(v) = layer.cache.get(key) {
                 return Some(v.clone_ref(py));
             }
         }
@@ -144,23 +155,23 @@ impl DependencyCacheBase {
         return self.cache_stack
             .iter()
             .rev()
-            .any(|layer| layer.contains_key(key))
+            .any(|layer| layer.cache.contains_key(key))
             || self.cache.contains_key(key);
     }
 
     pub fn remove_cached_value(&mut self, key: &CacheKey) -> Option<Py<PyAny>> {
         for layer in self.cache_stack.iter_mut().rev() {
-            if let Some(v) = layer.remove(key) {
+            if let Some(v) = layer.cache.remove(key) {
                 return Some(v);
             }
         }
-        self.cache.remove(key)
+        return self.cache.remove(key);
     }
 
     pub fn effective_cache(&self) -> HashMap<&CacheKey, &Py<PyAny>> {
         let mut merged: HashMap<&CacheKey, &Py<PyAny>> = self.cache.iter().collect();
         for layer in &self.cache_stack {
-            for (k, v) in layer {
+            for (k, v) in &layer.cache {
                 merged.insert(k, v);
             }
         }
@@ -170,14 +181,14 @@ impl DependencyCacheBase {
     pub fn clear_effective_cache(&mut self) -> () {
         if let Some(layer) = self.cache_stack.last_mut() {
             let removed_keys: Vec<CacheKey> = {
-                let keys = layer.keys().cloned().collect();
-                layer.clear();
+                let keys = layer.cache.keys().cloned().collect();
+                layer.cache.clear();
                 keys
             };
             for key in removed_keys {
                 self.method_dependency_graph.temporarily_invalidate(key);
             }
-            layer.clear();
+            layer.cache.clear();
         } else {
             self.method_dependency_graph.invalidate_all();
             self.cache.clear();
@@ -298,7 +309,7 @@ impl DependencyCacheBase {
 
             dict.set_item(key, value.clone_ref(py))?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[getter]
@@ -342,7 +353,7 @@ impl DependencyCacheBase {
             let list = PySet::new(py, parent_bounds)?;
             dict.set_item(child_key, list)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[getter]
@@ -366,7 +377,7 @@ impl DependencyCacheBase {
 
             dict.set_item(key, state)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[pyo3(signature = (order=None))]
@@ -416,7 +427,7 @@ impl DependencyCacheBase {
             result.set_item(method_name, value)?;
         }
 
-        Ok(result)
+        return Ok(result);
     }
 
     #[pyo3(signature = (data, order=None))]
@@ -495,6 +506,6 @@ impl DependencyCacheBase {
             load_method(&name)?;
         }
 
-        Ok(())
+        return Ok(());
     }
 }

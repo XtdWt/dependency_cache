@@ -81,7 +81,7 @@ pub fn validate_self_only_method(py: Python<'_>, func: &Bound<'_, PyAny>) -> PyR
         );
         return Err(PyValueError::new_err(msg));
     }
-    Ok(())
+    return Ok(());
 }
 
 
@@ -165,7 +165,7 @@ fn visit(
         visit(py, &child?, ast_module, dependencies, visited)?;
     }
 
-    Ok(())
+    return Ok(());
 }
 
 
