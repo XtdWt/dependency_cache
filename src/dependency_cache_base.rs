@@ -116,11 +116,11 @@ impl DependencyCacheBase {
         return key;
     }
 
-    pub fn push_cache_stack(mut self) {
+    pub fn push_cache_stack(&mut self) {
         return self.cache_stack.push(HashMap::new());
     }
 
-    pub fn pop_cache_stack(mut self) -> PyResult<()> {
+    pub fn pop_cache_stack(&mut self) -> PyResult<()> {
         self.cache_stack.pop().ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
         return Ok(());
     }
