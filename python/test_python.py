@@ -1,5 +1,5 @@
 import pytest
-from dependency_cache import DependencyCacheBase, dependency_cached, plot_dependency_graph
+from dependency_cache import DependencyCacheBase, custom_scenario, dependency_cached, plot_dependency_graph
 
 
 class IncorrectInheritance:
@@ -373,3 +373,23 @@ def test_strict_get_raises():
         obj.get_cached_value("A")
 
     assert obj.get_cached_value("A", strict=False) is None
+
+
+def test_custom_scenario():
+    obj = SimpleTestObj(1, 2)
+
+    assert obj.C() == 3
+
+    with custom_scenario([obj]):
+        obj.update_cached_value("A", 100)
+
+        assert obj.C() == 102
+
+        with custom_scenario([obj]):
+            obj.update_cached_value("B", 3000)
+
+            assert obj.C() == 3100
+
+        assert obj.C() == 102
+
+    assert obj.C() == 3

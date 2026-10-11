@@ -136,6 +136,53 @@ impl DependencyCacheBase {
         }
         return None;
     }
+
+    pub fn contains_cached_value(&self, key: &CacheKey) -> bool {
+        if !self.method_dependency_graph.is_valid(*key) {
+            return false;
+        }
+        return self.cache_stack
+            .iter()
+            .rev()
+            .any(|layer| layer.contains_key(key))
+            || self.cache.contains_key(key);
+    }
+
+    pub fn remove_cached_value(&mut self, key: &CacheKey) -> Option<Py<PyAny>> {
+        for layer in self.cache_stack.iter_mut().rev() {
+            if let Some(v) = layer.remove(key) {
+                return Some(v);
+            }
+        }
+        self.cache.remove(key)
+    }
+
+    pub fn effective_cache(&self) -> HashMap<&CacheKey, &Py<PyAny>> {
+        let mut merged: HashMap<&CacheKey, &Py<PyAny>> = self.cache.iter().collect();
+        for layer in &self.cache_stack {
+            for (k, v) in layer {
+                merged.insert(k, v);
+            }
+        }
+        return merged;
+    }
+
+    pub fn clear_effective_cache(&mut self) -> () {
+        if let Some(layer) = self.cache_stack.last_mut() {
+            let removed_keys: Vec<CacheKey> = {
+                let keys = layer.keys().cloned().collect();
+                layer.clear();
+                keys
+            };
+            for key in removed_keys {
+                self.method_dependency_graph.temporarily_invalidate(key);
+            }
+            layer.clear();
+        } else {
+            self.method_dependency_graph.invalidate_all();
+            self.cache.clear();
+        }
+    }
 }
 
 #[pymethods]
@@ -153,13 +200,17 @@ impl DependencyCacheBase {
     }
 
     #[pyo3(signature = (method_name, strict=true, **kwargs))]
-    pub fn get_cached_value(&mut self, py: Python<'_>, method_name: String, strict: bool, kwargs: Option<Py<PyDict>>) -> PyResult<Option<Py<PyAny>>> {
+    pub fn get_cached_value(
+        &mut self,
+        py: Python<'_>,
+        method_name: String,
+        strict: bool,
+        kwargs: Option<Py<PyDict>>,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.method_dependency_graph.is_valid(key) {
-            if let Some(obj) = self.cache.get(&key) {
-                return Ok(Some(obj.clone_ref(py)));
-            }
+        if let Some(value) = self.get_cached_value_by_key(py, key) {
+            return Ok(Some(value));
         }
 
         if strict {
@@ -178,47 +229,58 @@ impl DependencyCacheBase {
         kwargs: Option<Py<PyDict>>,
     ) -> PyResult<bool> {
         let key = self.get_key(py, &method_name, &kwargs)?;
-        Ok(self.method_dependency_graph.is_valid(key) && self.cache.contains_key(&key))
+        return Ok(self.contains_cached_value(&key));
     }
 
 
     #[pyo3(signature = (method_name, value, **kwargs))]
-    pub fn update_cached_value(&mut self, py: Python<'_>, method_name: String, value: Py<PyAny>, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
+    pub fn update_cached_value(
+        &mut self,
+        py: Python<'_>,
+        method_name: String,
+        value: Py<PyAny>,
+        kwargs: Option<Py<PyDict>>,
+    ) -> PyResult<()> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        let Some(v) = self.cache.get_mut(&key) else {
+        if !self.contains_cached_value(&key) {
             return Err(PyKeyError::new_err(format!(
                 "Cannot update cached value for '{method_name}'"
             )));
         };
-        *v = value;
+        self.set_cached_value_by_key(key, value);
         self.method_dependency_graph.temporarily_invalidate(key);
         self.method_dependency_graph.validate(key);
         return Ok(());
     }
 
     pub fn clear_cache(&mut self) {
-        self.method_dependency_graph.invalidate_all();
-        self.cache.clear();
+        self.clear_effective_cache();
     }
 
     #[pyo3(signature = (method_name, **kwargs))]
-    pub fn clear_cached_value(&mut self, py: Python<'_>, method_name: String, kwargs: Option<Py<PyDict>>) -> PyResult<()> {
+    pub fn clear_cached_value(
+        &mut self,
+        py: Python<'_>,
+        method_name: String,
+        kwargs: Option<Py<PyDict>>,
+    ) -> PyResult<()> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.cache.remove(&key).is_none() {
+        if self.remove_cached_value(&key).is_none() {
             return Err(PyKeyError::new_err(format!(
                 "Cannot clear cached value for '{method_name}'"
             )));
         }
         self.method_dependency_graph.temporarily_invalidate(key);
-        Ok(())
+        return Ok(());
     }
 
     #[getter]
     pub fn get_cached_values<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
         let dict = PyDict::new(py);
-        for (key, value) in &self.cache {
+        let cache_state = self.effective_cache();
+        for (key, value) in &cache_state {
             let Some(bound) = self.metadata_hash_manager.get_signature(py, key) else {
                 continue;
             };
