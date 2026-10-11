@@ -121,7 +121,10 @@ impl DependencyCacheBase {
     }
 
     pub fn pop_cache_stack(&mut self) -> PyResult<()> {
-        self.cache_stack.pop().ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
+        let cache_layer = self.cache_stack.pop().ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
+        for (key, _) in cache_layer {
+            self.method_dependency_graph.temporarily_invalidate(key);
+        }
         return Ok(());
     }
 
