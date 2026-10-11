@@ -75,7 +75,7 @@ impl DependencyCacheBase {
         }
 
     pub fn current_call_stack_top(&self) -> Option<(CacheKey, bool)> {
-        self.call_stack.last().cloned()
+        return self.call_stack.last().cloned();
     }
 
     pub fn push_call_stack(&mut self, key: CacheKey, add_parent_dependencies: bool) {
@@ -136,7 +136,7 @@ impl DependencyCacheBase {
             .ok_or_else(|| PyRuntimeError::new_err("Attempted to remove non existant layer"))?;
 
         self.method_dependency_graph = layer.graph_snapshot;
-        Ok(())
+        return Ok(());
     }
 
     pub fn get_from_temporary_cache(&self, py: Python<'_>, key: &CacheKey) -> Option<Py<PyAny>> {
@@ -165,7 +165,7 @@ impl DependencyCacheBase {
                 return Some(v);
             }
         }
-        self.cache.remove(key)
+        return self.cache.remove(key);
     }
 
     pub fn effective_cache(&self) -> HashMap<&CacheKey, &Py<PyAny>> {
@@ -309,7 +309,7 @@ impl DependencyCacheBase {
 
             dict.set_item(key, value.clone_ref(py))?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[getter]
@@ -353,7 +353,7 @@ impl DependencyCacheBase {
             let list = PySet::new(py, parent_bounds)?;
             dict.set_item(child_key, list)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[getter]
@@ -377,7 +377,7 @@ impl DependencyCacheBase {
 
             dict.set_item(key, state)?;
         }
-        Ok(dict)
+        return Ok(dict);
     }
 
     #[pyo3(signature = (order=None))]
@@ -427,7 +427,7 @@ impl DependencyCacheBase {
             result.set_item(method_name, value)?;
         }
 
-        Ok(result)
+        return Ok(result);
     }
 
     #[pyo3(signature = (data, order=None))]
@@ -506,6 +506,6 @@ impl DependencyCacheBase {
             load_method(&name)?;
         }
 
-        Ok(())
+        return Ok(());
     }
 }

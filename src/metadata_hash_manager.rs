@@ -32,7 +32,7 @@ impl MetadataHashManager {
                 return Ok(Some(key));
             }
         }
-        Ok(None)
+        return Ok(None);
     }
 
     pub fn get_cache_key(
@@ -41,8 +41,8 @@ impl MetadataHashManager {
         hash: &isize,
         sig: &Bound<'_, PyTuple>,
     ) -> PyResult<CacheKey> {
-        self.find_cache_key(py, hash, sig)?
-            .ok_or_else(|| PyKeyError::new_err("No cache key found for provided signature"))
+        return self.find_cache_key(py, hash, sig)?
+            .ok_or_else(|| PyKeyError::new_err("No cache key found for provided signature"));
     }
 
     pub fn create_cache_key(
@@ -58,10 +58,10 @@ impl MetadataHashManager {
         self.next_id += 1;
         self.buckets.entry(hash).or_default().push(key);
         self.signatures.insert(key, sig);
-        Ok(key)
+        return Ok(key);
     }
 
     pub fn get_signature<'py>(&self, py: Python<'py>, id: &CacheKey) -> Option<Bound<'py, PyTuple>> {
-        self.signatures.get(id).map(|s| s.bind(py).clone())
+        return self.signatures.get(id).map(|s| s.bind(py).clone());
     }
 }

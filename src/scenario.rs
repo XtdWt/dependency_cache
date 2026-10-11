@@ -26,7 +26,7 @@ impl Scenario {
                 base.borrow_mut().push_cache_stack();
             }
         }
-        Ok(slf.clone().into_any())
+        return Ok(slf.clone().into_any());
     }
 
     fn __exit__<'py>(
@@ -50,12 +50,12 @@ impl Scenario {
                 base.borrow_mut().pop_cache_stack()?;
             }
         }
-        Ok(false)
+        return Ok(false);
     }
 }
 
 
 #[pyfunction]
 pub fn custom_scenario(items: Vec<Py<PyAny>>) -> PyResult<Scenario> {
-    Ok(Scenario { items })
+    return Ok(Scenario { items });
 }
