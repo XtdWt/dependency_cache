@@ -21,6 +21,7 @@ pip install dependency-cache
 | `dependency_cached` | A footgun-enabled decorator for a method where you **explicitly declare** all direct dependencies. |
 | `automagically_dependency_cached` | A decorator which **automagically infers** the direct dependencies. |
 | `plot_dependency_graph` | Visualizes an instance's dependency graph, for inspection or debugging. |
+| `custom_scenario` | A context manager to temporarily run a custom dependency scenario, restoring the original state on exit. |
 
 All decorators accept optional parameters like use_cache, dependencies, track_runtime_dependencies, and serialisable. For exact signatures and types, see the
 [generated stubs file](https://github.com/XtdWt/dependency_cache/blob/master/python/dependency_cache/dependency_cache.pyi).
@@ -102,7 +103,6 @@ uv run ./python/examples/example.py
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
 Current TODO list (in no particular order):
-- scenario analysis capability (add temporary cache to base)
 - add global_variable to link objects together
 - add validation to static dependencies, ensure methods are of decorator class (?)
 - improve plot_dependency_graph (maybe to GUI?) with interactive nodes

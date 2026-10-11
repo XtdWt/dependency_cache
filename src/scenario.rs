@@ -20,7 +20,7 @@ impl Scenario {
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "The decorated method's class must inherit from DependencyCacheBase",
+                            "custom_scenario() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().push_cache_stack();
@@ -44,7 +44,7 @@ impl Scenario {
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "The decorated method's class must inherit from DependencyCacheBase",
+                            "custom_scenario() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().pop_cache_stack()?;
