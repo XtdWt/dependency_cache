@@ -36,7 +36,7 @@ if __name__ == "__main__":
     c = ExampleCalculation(1, 2)
 
     calcuations = [c]
-    print(f"Result of C = {c.C()}")  # recalculates C returns 3
+    print(f"Result of C = {c.C()}")  # # calculates all, prints 3
     with custom_scenario(calcuations):
         c.update_cached_value("A", 100)
         print(f"Result of C = {c.C()}")  # recalculates C returns 102
