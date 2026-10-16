@@ -3,6 +3,7 @@ from .dependency_cache import (
     automagically_dependency_cached,
     custom_scenario,
     dependency_cached,
+    parallel_call,
 )
 from .plot_dependency_graph import plot_dependency_graph
 
@@ -12,4 +13,5 @@ __all__ = [
     "automagically_dependency_cached",
     "plot_dependency_graph",
     "custom_scenario",
+    "parallel_call",
 ]

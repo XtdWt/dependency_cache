@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rand = "0.10.2"
+rayon = "1.12.0"
 
 [dependencies.pyo3]
 version = "0.29.*"
