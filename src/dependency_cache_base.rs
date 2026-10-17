@@ -5,7 +5,7 @@ use pyo3::exceptions::{PyKeyError, PyRuntimeError, PyValueError};
 use rand::rng;
 use rand::seq::SliceRandom;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use crate::dependency_graph::{MethodDependencyGraph, ValidationState};
 use crate::py_introspection_utils::{normalise_function_signature_and_hash, validate_self_only_method};
@@ -14,14 +14,23 @@ use crate::metadata_hash_manager::{CacheKey, MetadataHashManager};
 
 
 pub struct CacheLayer {
-    pub cache: HashMap<CacheKey, Py<PyAny>>,
+    pub cache: Vec<Option<Py<PyAny>>>,
     pub graph_snapshot: MethodDependencyGraph<CacheKey>,  //TODO: maybe less expensive way to handling graph snapshot...
+}
+
+
+#[inline]
+fn set_cache_value(cache: &mut Vec<Option<Py<PyAny>>>, key: usize, value: Py<PyAny>) {
+    if key >= cache.len() {
+        cache.resize_with(key + 1, || None);
+    }
+    cache[key] = Some(value);
 }
 
 
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
-    pub cache: HashMap<CacheKey, Py<PyAny>>,
+    pub cache: Vec<Option<Py<PyAny>>>,
     pub method_dependency_graph: MethodDependencyGraph<CacheKey>,
     pub metadata_hash_manager: MetadataHashManager,
     pub call_stack: Vec<(CacheKey, bool)>,
@@ -35,9 +44,9 @@ impl DependencyCacheBase {
             return ();
         }
         if let Some(layer) = self.cache_stack.last_mut() {
-            layer.cache.insert(key, value);
+            set_cache_value(&mut layer.cache, key, value);
         } else {
-            self.cache.insert(key, value);
+            set_cache_value(&mut self.cache, key, value);
         };
     }
 
@@ -98,10 +107,10 @@ impl DependencyCacheBase {
 
     pub fn get_cached_value_by_key(&self, py: Python<'_>, key: CacheKey) -> Option<Py<PyAny>> {
         if self.method_dependency_graph.is_valid(key) {
-            if let Some(temp_cache_value) = self.get_from_temporary_cache(py, &key) {
+            if let Some(temp_cache_value) = self.get_from_temporary_cache(py, key) {
                 return Some(temp_cache_value);
             }
-            return self.cache.get(&key).map(|obj| obj.clone_ref(py));
+            return self.cache.get(key).and_then(|obj| obj.as_ref().map(|v| v.clone_ref(py)));
         }
         return None;
     }
@@ -124,7 +133,7 @@ impl DependencyCacheBase {
 
     pub fn push_cache_stack(&mut self) {
         return self.cache_stack.push(CacheLayer {
-                cache: HashMap::new(),
+                cache: Vec::new(),
                 graph_snapshot: self.method_dependency_graph.clone(),
             });
     }
@@ -139,59 +148,91 @@ impl DependencyCacheBase {
         return Ok(());
     }
 
-    pub fn get_from_temporary_cache(&self, py: Python<'_>, key: &CacheKey) -> Option<Py<PyAny>> {
+    pub fn get_from_temporary_cache(&self, py: Python<'_>, key: CacheKey) -> Option<Py<PyAny>> {
         for layer in self.cache_stack.iter().rev() {
-            if let Some(v) = layer.cache.get(key) {
+            if let Some(Some(v)) = layer.cache.get(key) {
                 return Some(v.clone_ref(py));
             }
         }
         return None;
     }
 
-    pub fn contains_cached_value(&self, key: &CacheKey) -> bool {
-        if !self.method_dependency_graph.is_valid(*key) {
+    pub fn contains_cached_value(&self, key: CacheKey) -> bool {
+        if !self.method_dependency_graph.is_valid(key) {
             return false;
         }
         return self.cache_stack
             .iter()
             .rev()
-            .any(|layer| layer.cache.contains_key(key))
-            || self.cache.contains_key(key);
+            .any(|layer| layer.cache.get(key).is_some_and(|obj| obj.is_some()))
+            || self.cache.get(key).is_some_and(|obj| obj.is_some());
     }
 
-    pub fn remove_cached_value(&mut self, key: &CacheKey) -> Option<Py<PyAny>> {
+    pub fn remove_cached_value(&mut self, key: CacheKey) -> Option<Py<PyAny>> {
         for layer in self.cache_stack.iter_mut().rev() {
-            if let Some(v) = layer.cache.remove(key) {
-                return Some(v);
+            if let Some(opt) = layer.cache.get_mut(key) {
+                if let Some(v) = opt.take() {
+                    return Some(v);
+                }
             }
         }
-        return self.cache.remove(key);
+        if let Some(opt) = self.cache.get_mut(key) {
+            return opt.take();
+        }
+        return None;
     }
 
-    pub fn effective_cache(&self) -> HashMap<&CacheKey, &Py<PyAny>> {
-        let mut merged: HashMap<&CacheKey, &Py<PyAny>> = self.cache.iter().collect();
-        for layer in &self.cache_stack {
-            for (k, v) in &layer.cache {
-                merged.insert(k, v);
+    pub fn effective_cache(&self) -> Vec<(CacheKey, &Py<PyAny>)> {
+        let max_len = self
+            .cache_stack
+            .iter()
+            .map(|l| l.cache.len())
+            .chain(std::iter::once(self.cache.len()))
+            .max()
+            .unwrap_or(0);
+
+        let mut result = Vec::new();
+        for i in 0..max_len {
+            let mut value: Option<&Py<PyAny>> =
+                self.cache.get(i).and_then(|opt| opt.as_ref());
+
+            for layer in &self.cache_stack {
+                if let Some(Some(v)) = layer.cache.get(i) {
+                    value = Some(v);
+                }
+            }
+
+            if let Some(v) = value {
+                result.push((i, v));
             }
         }
-        return merged;
+        return result;
     }
 
     pub fn clear_effective_cache(&mut self) -> () {
-        if let Some(layer) = self.cache_stack.last_mut() {
-            let removed_keys: Vec<CacheKey> = {
-                let keys = layer.cache.keys().cloned().collect();
-                layer.cache.clear();
-                keys
-            };
+        let mut removed_keys: HashSet<CacheKey> = HashSet::new();
+
+        for layer in self.cache_stack.iter_mut() {
+            for (i, obj) in layer.cache.iter_mut().enumerate() {
+                if obj.is_some() {
+                    *obj = None;
+                    removed_keys.insert(i);
+                }
+            }
+        }
+        for (i, obj) in self.cache.iter_mut().enumerate() {
+            if obj.is_some() {
+                *obj = None;
+                removed_keys.insert(i);
+            }
+        }
+
+        if removed_keys.is_empty() {
+            self.method_dependency_graph.invalidate_all();
+        } else {
             for key in removed_keys {
                 self.method_dependency_graph.temporarily_invalidate(key);
             }
-            layer.cache.clear();
-        } else {
-            self.method_dependency_graph.invalidate_all();
-            self.cache.clear();
         }
     }
 }
@@ -202,7 +243,7 @@ impl DependencyCacheBase {
     #[pyo3(signature = (*_args, **_kwargs))]
     fn new(_args: &Bound<'_, PyTuple>, _kwargs: Option<&Bound<'_, PyDict>>) -> Self {
         return Self {
-            cache: HashMap::new(),
+            cache: Vec::new(),
             method_dependency_graph: MethodDependencyGraph::new(),
             metadata_hash_manager: MetadataHashManager::new(),
             call_stack: Vec::new(),
@@ -240,7 +281,7 @@ impl DependencyCacheBase {
         kwargs: Option<Py<PyDict>>,
     ) -> PyResult<bool> {
         let key = self.get_key(py, &method_name, &kwargs)?;
-        return Ok(self.contains_cached_value(&key));
+        return Ok(self.contains_cached_value(key));
     }
 
 
@@ -254,7 +295,7 @@ impl DependencyCacheBase {
     ) -> PyResult<()> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if !self.contains_cached_value(&key) {
+        if !self.contains_cached_value(key) {
             return Err(PyKeyError::new_err(format!(
                 "Cannot update cached value for '{method_name}'"
             )));
@@ -278,7 +319,7 @@ impl DependencyCacheBase {
     ) -> PyResult<()> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if self.remove_cached_value(&key).is_none() {
+        if self.remove_cached_value(key).is_none() {
             return Err(PyKeyError::new_err(format!(
                 "Cannot clear cached value for '{method_name}'"
             )));
@@ -478,7 +519,7 @@ impl DependencyCacheBase {
 
             let mut base = slf.borrow_mut();
             let key = base.create_key(py, name, &None)?;
-            base.cache.insert(key, loaded_value.unbind());
+            set_cache_value(base.cache.as_mut(), key, loaded_value.unbind());
             Ok(())
         };
 

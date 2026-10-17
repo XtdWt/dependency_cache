@@ -4,7 +4,7 @@ use pyo3::exceptions::PyKeyError;
 
 use std::collections::HashMap;
 
-pub type CacheKey = u64;
+pub type CacheKey = usize;
 
 pub struct MetadataHashManager {
     buckets: HashMap<isize, Vec<CacheKey>>,
