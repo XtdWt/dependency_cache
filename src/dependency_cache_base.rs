@@ -22,7 +22,7 @@ pub struct CacheLayer {
 #[inline]
 fn set_cache_value(cache: &mut Vec<Option<Py<PyAny>>>, key: usize, value: Py<PyAny>) {
     if key >= cache.len() {
-        cache.resize_with(key + 1, || {None});
+        cache.resize_with(key + 1, || None);
     }
     cache[key] = Some(value);
 }
@@ -519,7 +519,7 @@ impl DependencyCacheBase {
 
             let mut base = slf.borrow_mut();
             let key = base.create_key(py, name, &None)?;
-            base.cache.insert(key, Some(loaded_value.unbind()));
+            set_cache_value(base.cache.as_mut(), key, loaded_value.unbind());
             Ok(())
         };
 
