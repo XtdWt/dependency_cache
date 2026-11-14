@@ -2,8 +2,8 @@ import pytest
 from dependency_cache import (
     DependencyCacheBase,
     automagically_dependency_cached,
-    custom_scenario,
     plot_dependency_graph,
+    temporary_override,
 )
 
 
@@ -309,17 +309,17 @@ def test_incorrect_decorator_format():
         (-55, -101),
     ],
 )
-def test_custom_scenario(x, y):
+def test_temporary_override(x, y):
     obj = SimpleTestObj(x, y)
 
     assert obj.C() == x + y
 
-    with custom_scenario([obj]):
+    with temporary_override([obj]):
         obj.update_cached_value("A", x * 10)
 
         assert obj.C() == x * 10 + y
 
-        with custom_scenario([obj]):
+        with temporary_override([obj]):
             obj.update_cached_value("B", y + 3000)
 
             assert obj.C() == x * 10 + (y + 3000)

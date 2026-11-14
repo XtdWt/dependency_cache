@@ -4,13 +4,13 @@ use pyo3::exceptions::PyTypeError;
 use crate::DependencyCacheBase;
 
 #[pyclass]
-pub struct Scenario {
+pub struct TemporaryOverride {
     items: Vec<Py<PyAny>>,
 }
 
 
 #[pymethods]
-impl Scenario {
+impl TemporaryOverride {
     fn __enter__<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         {
             let scenario = slf.borrow();
@@ -56,6 +56,6 @@ impl Scenario {
 
 
 #[pyfunction]
-pub fn custom_scenario(items: Vec<Py<PyAny>>) -> PyResult<Scenario> {
-    return Ok(Scenario { items });
+pub fn temporary_override(items: Vec<Py<PyAny>>) -> PyResult<TemporaryOverride> {
+    return Ok(TemporaryOverride { items });
 }

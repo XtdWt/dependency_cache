@@ -1,8 +1,8 @@
 from .dependency_cache import (
     DependencyCacheBase,
     automagically_dependency_cached,
-    custom_scenario,
     dependency_cached,
+    temporary_override,
 )
 from .plot_dependency_graph import plot_dependency_graph
 
@@ -11,5 +11,5 @@ __all__ = [
     "DependencyCacheBase",
     "automagically_dependency_cached",
     "plot_dependency_graph",
-    "custom_scenario",
+    "temporary_override",
 ]
