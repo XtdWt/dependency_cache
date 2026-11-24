@@ -1,5 +1,6 @@
 from .dependency_cache import (
     DependencyCacheBase,
+    Scenario,
     automagically_dependency_cached,
     dependency_cached,
     temporary_override,
@@ -12,4 +13,5 @@ __all__ = [
     "automagically_dependency_cached",
     "plot_dependency_graph",
     "temporary_override",
+    "Scenario",
 ]
