@@ -332,12 +332,15 @@ def test_temporary_override(x, y):
 
 def test_scenarios():
     objects = [SimpleTestObj(i, i**2) for i in range(1, 4)]
+    for obj in objects:
+        obj.C()
+
     scenario = Scenario(objects)
 
     assert scenario.map(lambda x: x.C()).collect(False) == [2, 6, 12]
 
     def tweak_object(x):
-        x.update_cached_value("A", 1)
+        x.update_cached_value("A", 1, must_contain=False)
         return x
 
     assert scenario.map(tweak_object).map(lambda x: x.C()).collect() == [2, 5, 10]

@@ -17,17 +17,17 @@ enum Operation {
 
 impl Operation {
     fn clone_ref(&self, py: Python<'_>) -> Self {
-        match self {
+        return match self {
             Operation::Map(f)    => Operation::Map(f.clone_ref(py)),
             Operation::Filter(f) => Operation::Filter(f.clone_ref(py)),
-        }
+        };
     }
 }
 
 
 impl Scenario {
     fn apply_operations(&self, object: &Py<PyAny>) -> PyResult<Option<Py<PyAny>>> {
-        Python::attach(|py| {
+        return Python::attach(|py| {
             let mut current = object.clone_ref(py);
             for op in &self.operations {
                 match op {
@@ -45,7 +45,26 @@ impl Scenario {
                 }
             }
             Ok(Some(current))
-        })
+        });
+    }
+
+    fn push_overrides(&self, py: Python<'_>) -> PyResult<()> {
+        for item in &self.objects {
+            let base = item.bind(py).cast::<DependencyCacheBase>()?;
+            base.borrow_mut().push_cache_stack();
+        }
+        return Ok(());
+    }
+
+    fn pop_overrides(&self, py: Python<'_>) -> Result<(), PyErr> {
+        let mut first_err: Option<PyErr> = None;
+        for item in &self.objects {
+            let base = item.bind(py).cast::<DependencyCacheBase>()?;
+            if let Err(e) = base.borrow_mut().pop_cache_stack() {
+                first_err.get_or_insert(e);
+            }
+        }
+        return first_err.map_or(Ok(()), Err);
     }
 }
 
@@ -53,8 +72,15 @@ impl Scenario {
 #[pymethods]
 impl Scenario {
     #[new]
-    fn new(objects: Vec<Py<PyAny>>) -> Self {
-        Scenario { objects, operations: Vec::new() }
+    fn new(py: Python<'_>, objects: Vec<Py<PyAny>>) -> PyResult<Self> {
+        for object in &objects {
+            object.bind(py).cast::<DependencyCacheBase>().map_err(|_| {
+                PyTypeError::new_err(
+                    "Scenario items must inherit from DependencyCacheBase",
+                )
+            })?;
+        }
+        return Ok(Scenario { objects, operations: Vec::new() });
     }
 
     fn map(&self, py: Python<'_>, func: Py<PyAny>) -> PyResult<Self> {
@@ -62,12 +88,12 @@ impl Scenario {
             .map(|op| op.clone_ref(py))
             .collect();
         ops.push(Operation::Map(func));
-        Ok(Scenario {
+        return Ok(Scenario {
             objects: self.objects.iter()
                 .map(|o| o.clone_ref(py))
                 .collect(),
             operations: ops,
-        })
+        });
     }
 
     fn filter(&self, py: Python<'_>, predicate: Py<PyAny>) -> PyResult<Self> {
@@ -75,28 +101,31 @@ impl Scenario {
             .map(|op| op.clone_ref(py))
             .collect();
         ops.push(Operation::Filter(predicate));
-        Ok(Scenario {
+        return Ok(Scenario {
             objects: self.objects.iter()
                 .map(|o| o.clone_ref(py))
                 .collect(),
             operations: ops,
-        })
+        });
     }
 
     #[pyo3(signature = (parallel = true))]
     fn collect(&self, py: Python<'_>, parallel: bool) -> PyResult<Vec<Py<PyAny>>> {
-        if parallel {
-            return py.detach(|| {
+        self.push_overrides(py)?;
+        let results = if parallel {
+            py.detach(|| {
                 self.objects
                     .par_iter()
                     .filter_map(|object| self.apply_operations(object).transpose())
                     .collect::<PyResult<Vec<_>>>()
-            });
+            })
         } else {
-            return self.objects
+            self.objects
                 .iter()
                 .filter_map(|object| self.apply_operations(object).transpose())
-                .collect::<PyResult<Vec<_>>>();
-        }
+                .collect::<PyResult<Vec<_>>>()
+        };
+        self.pop_overrides(py)?;
+        return results;
     }
 }
