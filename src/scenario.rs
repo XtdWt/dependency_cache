@@ -1,5 +1,8 @@
 use pyo3::prelude::*;
+use pyo3::exceptions::PyTypeError;
 use rayon::prelude::*;
+
+use crate::DependencyCacheBase;
 
 #[pyclass]
 pub struct Scenario {
@@ -23,9 +26,9 @@ impl Operation {
 
 
 impl Scenario {
-    fn apply_operations(&self, item: &Py<PyAny>) -> PyResult<Option<Py<PyAny>>> {
+    fn apply_operations(&self, object: &Py<PyAny>) -> PyResult<Option<Py<PyAny>>> {
         Python::attach(|py| {
-            let mut current = item.clone_ref(py);
+            let mut current = object.clone_ref(py);
             for op in &self.operations {
                 match op {
                     Operation::Map(func) => {
@@ -86,13 +89,13 @@ impl Scenario {
             return py.detach(|| {
                 self.objects
                     .par_iter()
-                    .filter_map(|item| self.apply_operations(item).transpose())
+                    .filter_map(|object| self.apply_operations(object).transpose())
                     .collect::<PyResult<Vec<_>>>()
             });
         } else {
             return self.objects
                 .iter()
-                .filter_map(|item| self.apply_operations(item).transpose())
+                .filter_map(|object| self.apply_operations(object).transpose())
                 .collect::<PyResult<Vec<_>>>();
         }
     }
