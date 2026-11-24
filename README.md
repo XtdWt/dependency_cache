@@ -103,8 +103,8 @@ uv run ./python/examples/example.py
 This project is still a work in progress, with everything from API to underlying design subject to change on my whim.
 
 Current TODO list (in no particular order):
-- add global_variable to link objects together
+- change dependency graph to use indexing and cache key
 - add validation to static dependencies, ensure methods are of decorator class (?)
 - improve plot_dependency_graph (maybe to GUI?) with interactive nodes
-- add object thread safety for python 3.14+
-- work out how best to handle nested objects
+- add static dependency builds on startup, for methods with no arguments
+- add more operation and collection types
