@@ -1,4 +1,4 @@
-from dependency_cache import DependencyCacheBase, automagically_dependency_cached, custom_scenario
+from dependency_cache import DependencyCacheBase, automagically_dependency_cached, temporary_override
 
 
 class ExampleCalculation(DependencyCacheBase):
@@ -37,11 +37,11 @@ if __name__ == "__main__":
 
     calcuations = [c]
     print(f"Result of C = {c.C()}")  # # calculates all, prints 3
-    with custom_scenario(calcuations):
+    with temporary_override(calcuations):
         c.update_cached_value("A", 100)
         print(f"Result of C = {c.C()}")  # recalculates C returns 102
 
-        with custom_scenario(calcuations):
+        with temporary_override(calcuations):
             c.update_cached_value("B", 200)
             print(f"Result of C = {c.C()}")  # recalculates C returns 300
 

@@ -1,5 +1,5 @@
 import pytest
-from dependency_cache import DependencyCacheBase, custom_scenario, dependency_cached, plot_dependency_graph
+from dependency_cache import DependencyCacheBase, Scenario, dependency_cached, plot_dependency_graph, temporary_override
 
 
 class IncorrectInheritance:
@@ -369,17 +369,17 @@ def test_strict_get_raises():
         (-55, -101),
     ],
 )
-def test_custom_scenario(x, y):
+def test_temporary_override(x, y):
     obj = SimpleTestObj(x, y)
 
     assert obj.C() == x + y
 
-    with custom_scenario([obj]):
+    with temporary_override([obj]):
         obj.update_cached_value("A", x * 10)
 
         assert obj.C() == x * 10 + y
 
-        with custom_scenario([obj]):
+        with temporary_override([obj]):
             obj.update_cached_value("B", y + 3000)
 
             assert obj.C() == x * 10 + (y + 3000)
@@ -387,3 +387,24 @@ def test_custom_scenario(x, y):
         assert obj.C() == x * 10 + y
 
     assert obj.C() == x + y
+
+
+def test_scenarios():
+    objects = [SimpleTestObj(i, i**2) for i in range(1, 4)]
+    for obj in objects:
+        obj.C()
+
+    scenario = Scenario(objects)
+
+    assert scenario.map(lambda x: x.C()).collect(False) == [2, 6, 12]
+
+    def tweak_object(x):
+        print(x.cached_values)
+        x.update_cached_value("A", 1, must_contain=False)
+        return x
+
+    assert scenario.map(tweak_object).map(lambda x: x.C()).collect() == [2, 5, 10]
+
+    assert scenario.map(tweak_object).map(lambda x: x.C()).filter(lambda x: x < 5).collect() == [2]
+
+    assert [o.A() for o in objects] == [1, 2, 3]
