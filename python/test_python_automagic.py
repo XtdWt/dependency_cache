@@ -1,6 +1,7 @@
 import pytest
 from dependency_cache import (
     DependencyCacheBase,
+    Scenario,
     automagically_dependency_cached,
     plot_dependency_graph,
     temporary_override,
@@ -327,3 +328,18 @@ def test_temporary_override(x, y):
         assert obj.C() == x * 10 + y
 
     assert obj.C() == x + y
+
+
+def test_scenarios():
+    objects = [SimpleTestObj(i, i**2) for i in range(1, 4)]
+    scenario = Scenario(objects)
+
+    assert scenario.map(lambda x: x.C()).collect(False) == [2, 6, 12]
+
+    def tweak_object(x):
+        x.update_cached_value("A", 1)
+        return x
+
+    assert scenario.map(tweak_object).map(lambda x: x.C()).collect() == [2, 5, 10]
+
+    assert scenario.map(tweak_object).map(lambda x: x.C()).filter(lambda x: x < 5).collect() == [2]
