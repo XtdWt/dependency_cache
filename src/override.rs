@@ -5,7 +5,7 @@ use crate::DependencyCacheBase;
 
 #[pyclass]
 pub struct TemporaryOverride {
-    items: Vec<Py<PyAny>>,
+    objects: Vec<Py<PyAny>>,
 }
 
 
@@ -13,14 +13,14 @@ pub struct TemporaryOverride {
 impl TemporaryOverride {
     fn __enter__<'py>(slf: &Bound<'py, Self>, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         {
-            let scenario = slf.borrow();
-            for item in &scenario.items {
-                let base = item
+            let temporary_override = slf.borrow();
+            for object in &temporary_override.objects {
+                let base = object
                     .bind(py)
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "custom_scenario() expects items to inherit from DependencyCacheBase",
+                            "temporary_override() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().push_cache_stack();
@@ -37,14 +37,14 @@ impl TemporaryOverride {
         _traceback: Option<Bound<'_, PyAny>>,
     ) -> PyResult<bool> {
         {
-            let scenario = slf.borrow();
-            for item in scenario.items.iter() {
-                let base = item
+            let temporary_override = slf.borrow();
+            for objects in temporary_override.objects.iter() {
+                let base = objects
                     .bind(py)
                     .cast::<DependencyCacheBase>()
                     .map_err(|_| {
                         PyTypeError::new_err(
-                            "custom_scenario() expects items to inherit from DependencyCacheBase",
+                            "temporary_override() expects items to inherit from DependencyCacheBase",
                         )
                     })?;
                 base.borrow_mut().pop_cache_stack()?;
@@ -56,6 +56,6 @@ impl TemporaryOverride {
 
 
 #[pyfunction]
-pub fn temporary_override(items: Vec<Py<PyAny>>) -> PyResult<TemporaryOverride> {
-    return Ok(TemporaryOverride { items });
+pub fn temporary_override(objects: Vec<Py<PyAny>>) -> PyResult<TemporaryOverride> {
+    return Ok(TemporaryOverride { objects });
 }
