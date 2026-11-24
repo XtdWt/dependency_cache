@@ -4,13 +4,15 @@ mod dependency_cache_base;
 mod decorator_factory;
 mod py_introspection_utils;
 mod metadata_hash_manager;
+mod r#override;
 mod scenario;
 
 use pyo3::prelude::*;
 
 use dependency_cache_base::DependencyCacheBase;
 use decorator_factory::{ManualDependencyCacheDecoratorFactory, AutomagicDependencyCacheDecoratorFactory};
-use scenario::custom_scenario;
+use r#override::temporary_override;
+use scenario::Scenario;
 
 
 #[pymodule]
@@ -26,5 +28,8 @@ mod dependency_cache {
     use super::AutomagicDependencyCacheDecoratorFactory;
 
     #[pymodule_export]
-    use super::custom_scenario;
+    use super::temporary_override;
+
+    #[pymodule_export]
+    use super::Scenario;
 }

@@ -285,17 +285,18 @@ impl DependencyCacheBase {
     }
 
 
-    #[pyo3(signature = (method_name, value, **kwargs))]
+    #[pyo3(signature = (method_name, value, must_contain=true, **kwargs))]
     pub fn update_cached_value(
         &mut self,
         py: Python<'_>,
         method_name: String,
         value: Py<PyAny>,
+        must_contain: bool,
         kwargs: Option<Py<PyDict>>,
     ) -> PyResult<()> {
         let key = self.get_key(py, &method_name, &kwargs)?;
 
-        if !self.contains_cached_value(key) {
+        if must_contain && !self.contains_cached_value(key) {
             return Err(PyKeyError::new_err(format!(
                 "Cannot update cached value for '{method_name}'"
             )));
