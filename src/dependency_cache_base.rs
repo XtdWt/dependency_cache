@@ -15,7 +15,7 @@ use crate::metadata_hash_manager::{CacheKey, MetadataHashManager};
 
 pub struct CacheLayer {
     pub cache: Vec<Option<Py<PyAny>>>,
-    pub graph_snapshot: MethodDependencyGraph<CacheKey>,  //TODO: maybe less expensive way to handling graph snapshot...
+    pub graph_snapshot: MethodDependencyGraph,  //TODO: maybe less expensive way to handling graph snapshot...
 }
 
 
@@ -31,7 +31,7 @@ fn set_cache_value(cache: &mut Vec<Option<Py<PyAny>>>, key: usize, value: Py<PyA
 #[pyclass(subclass)]
 pub struct DependencyCacheBase {
     pub cache: Vec<Option<Py<PyAny>>>,
-    pub method_dependency_graph: MethodDependencyGraph<CacheKey>,
+    pub method_dependency_graph: MethodDependencyGraph,
     pub metadata_hash_manager: MetadataHashManager,
     pub call_stack: Vec<(CacheKey, bool)>,
     pub cache_stack: Vec<CacheLayer>,
