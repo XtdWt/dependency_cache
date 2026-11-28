@@ -3,6 +3,7 @@ from .dependency_cache import (
     Scenario,
     automagically_dependency_cached,
     dependency_cached,
+    read_items,
     temporary_override,
 )
 from .plot_dependency_graph import plot_dependency_graph
@@ -14,4 +15,5 @@ __all__ = [
     "plot_dependency_graph",
     "temporary_override",
     "Scenario",
+    "read_items",
 ]

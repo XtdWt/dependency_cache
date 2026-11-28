@@ -1,9 +1,36 @@
 use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
+use std::sync::Mutex;
 
 use crate::dependency_cache_base::DependencyCacheBase;
 use crate::py_introspection_utils::normalise_function_signature_and_hash;
+
+
+static GLOBAL_ITEMS: Mutex<Vec<Py<PyAny>>> = Mutex::new(Vec::new());
+
+
+#[pyfunction]
+pub fn read_items(py: Python<'_>) -> PyResult<Vec<bool>> {
+    let items: Vec<Py<PyAny>> = {
+        let guard = GLOBAL_ITEMS.lock().unwrap();
+        guard.iter().map(|item| item.clone_ref(py)).collect()
+    };
+
+    let mut results = Vec::with_capacity(items.len());
+    for item in &items {
+        let Ok(base) = item.bind(py).cast::<DependencyCacheBase>() else {
+            continue;
+        };
+        let Ok(cached) = base.try_borrow_mut()?.is_cached(py, "D".to_string(), None) else {
+            continue;
+        };
+        // let cached = base.try_borrow_mut()?.is_cached(py, "A".to_string(), None);
+        results.push(cached);
+    }
+    Ok(results)
+}
+
 
 #[pyclass]
 pub struct DependencyCacheDecorator {
@@ -41,6 +68,9 @@ impl DependencyCacheDecorator {
         if obj.is_none() {
             return Ok(slf.clone().into_any().unbind());
         }
+
+        let mut vec = GLOBAL_ITEMS.lock().unwrap();
+            vec.push(obj.clone().unbind());
 
         let bound_method = py
             .import("types")?

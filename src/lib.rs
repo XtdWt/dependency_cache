@@ -13,7 +13,7 @@ use dependency_cache_base::DependencyCacheBase;
 use decorator_factory::{ManualDependencyCacheDecoratorFactory, AutomagicDependencyCacheDecoratorFactory};
 use r#override::temporary_override;
 use scenario::Scenario;
-
+use decorator::read_items;
 
 #[pymodule]
 mod dependency_cache {
@@ -32,4 +32,7 @@ mod dependency_cache {
 
     #[pymodule_export]
     use super::Scenario;
+
+    #[pymodule_export]
+    use super::read_items;
 }
