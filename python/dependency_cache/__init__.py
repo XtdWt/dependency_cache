@@ -1,4 +1,5 @@
 from .dependency_cache import (
+    CopyLocal,
     DependencyCacheBase,
     Scenario,
     automagically_dependency_cached,
@@ -16,4 +17,6 @@ __all__ = [
     "temporary_override",
     "Scenario",
     "read_items",
+    "LocalCopy",
+    "CopyLocal",
 ]
