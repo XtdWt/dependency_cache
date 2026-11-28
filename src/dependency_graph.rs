@@ -38,7 +38,7 @@ impl MethodDependencyGraph {
     }
 
     fn get_max_key(&self, key: CacheKey, dependencies: &[CacheKey]) -> CacheKey {
-        return dependencies.iter().copied().chain(std::iter::once(key)).max().expect("Adding once guarantees at least one element in list, thus None is impossible");
+        return dependencies.iter().copied().chain(std::iter::once(key)).max().unwrap_or(key);
     }
 
     pub fn add_children_dependency(&mut self, key: CacheKey, dependencies: Vec<CacheKey>) -> () {
