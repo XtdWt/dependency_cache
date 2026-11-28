@@ -1,5 +1,12 @@
 import pytest
-from dependency_cache import DependencyCacheBase, Scenario, dependency_cached, plot_dependency_graph, temporary_override
+from dependency_cache import (
+    DependencyCacheBase,
+    Scenario,
+    dependency_cached,
+    plot_dependency_graph,
+    read_items,
+    temporary_override,
+)
 
 
 class IncorrectInheritance:
@@ -408,3 +415,5 @@ def test_scenarios():
     assert scenario.map(tweak_object).map(lambda x: x.C()).filter(lambda x: x < 5).collect() == [2]
 
     assert [o.A() for o in objects] == [1, 2, 3]
+
+    print(read_items())
