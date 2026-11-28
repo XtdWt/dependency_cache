@@ -1,5 +1,6 @@
-from _typeshed import SupportsGetItem
 from typing import Any, final
+
+from _typeshed import SupportsGetItem
 from typing_extensions import disjoint_base
 
 @disjoint_base
